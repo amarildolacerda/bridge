@@ -1,8 +1,0 @@
-menu "Bridge Configuration"
-    config MAX_BRIDGED_DEVICES
-        int "Maximum number of bridged devices"
-        default 10
-        range 1 20
-        help
-            Maximum number of ESP8266 devices that can be bridged.
-endmenu
