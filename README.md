@@ -1,1 +1,1 @@
-oia
+/oc descrever o projeto
