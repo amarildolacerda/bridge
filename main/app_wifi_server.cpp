@@ -314,9 +314,25 @@ static esp_err_t register_device_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    const char *id = id_item->valuestring;
-    const char *type_str = type_item->valuestring;
-    const char *name = name_item ? name_item->valuestring : id;
+    char id_buf[MAX_DEVICE_ID_LEN];
+    char type_buf[32];
+    char name_buf[MAX_DEVICE_NAME_LEN];
+
+    strncpy(id_buf, id_item->valuestring, sizeof(id_buf) - 1);
+    id_buf[sizeof(id_buf) - 1] = '\0';
+    strncpy(type_buf, type_item->valuestring, sizeof(type_buf) - 1);
+    type_buf[sizeof(type_buf) - 1] = '\0';
+
+    if (name_item && name_item->valuestring) {
+        strncpy(name_buf, name_item->valuestring, sizeof(name_buf) - 1);
+        name_buf[sizeof(name_buf) - 1] = '\0';
+    } else {
+        name_buf[0] = '\0';
+    }
+
+    const char *id = id_buf;
+    const char *type_str = type_buf;
+    const char *name = name_buf[0] ? name_buf : id_buf;
 
     char client_ip[16] = "0.0.0.0";
 
@@ -357,7 +373,7 @@ static esp_err_t register_device_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    esp_err_t err = rmaker_gateway_device_add(id, type, name);
+    esp_err_t err = rmaker_gateway_device_add(id, type);
     if (err != ESP_OK) {
         device_registry_remove_device(id);
         cJSON_Delete(root);
@@ -561,9 +577,9 @@ static esp_err_t device_commands_handler(httpd_req_t *req)
                     if (received <= 0) break;
                     cur_len += received;
                 }
-                buf[total_len] = '\0';
+    buf[total_len] = '\0';
 
-                cJSON *root = cJSON_Parse(buf);
+    cJSON *root = cJSON_Parse(buf);
                 if (root) {
                     cJSON *id_item = cJSON_GetObjectItem(root, "id");
                     if (id_item && id_item->valuestring) {

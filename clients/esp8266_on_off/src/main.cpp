@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <WiFiManager.h>
 #include <WiFiUdp.h>
+#include <EEPROM.h>
 #include "config.h"
 #include "pages.h"
 
@@ -27,6 +28,9 @@ static float s_humidity = 50.0;
 static int s_dimmer_level = 128;
 static int s_battery = 100;
 static unsigned long s_start_time = 0;
+
+static char s_device_id[32];
+static char s_device_name[48] = DEVICE_NAME;
 
 static char s_bridge_host[64] = BRIDGE_HOST;
 static uint16_t s_bridge_port = BRIDGE_PORT;
@@ -63,6 +67,51 @@ static const char *get_device_type_string(void)
 #endif
 }
 
+#define EEPROM_NAME_ADDR 0
+#define EEPROM_NAME_MAX 48
+
+static void save_device_name(const char *name)
+{
+    EEPROM.begin(128);
+    EEPROM.write(EEPROM_NAME_ADDR, 0xFF);
+    for (int i = 0; i < EEPROM_NAME_MAX - 1; i++) {
+        EEPROM.write(EEPROM_NAME_ADDR + 1 + i, name[i]);
+        if (name[i] == '\0') break;
+    }
+    EEPROM.write(EEPROM_NAME_ADDR + EEPROM_NAME_MAX, '\0');
+    EEPROM.commit();
+    EEPROM.end();
+}
+
+static bool is_valid_name(const char *s)
+{
+    if (!s || s[0] == '\0') return false;
+    for (int i = 0; s[i]; i++) {
+        char c = s[i];
+        if (c < 32 || c > 126) return false;
+    }
+    return true;
+}
+
+static void load_device_name(void)
+{
+    EEPROM.begin(128);
+    uint8_t marker = EEPROM.read(EEPROM_NAME_ADDR);
+    if (marker == 0xFF) {
+        char buf[EEPROM_NAME_MAX];
+        for (int i = 0; i < EEPROM_NAME_MAX - 1; i++) {
+            buf[i] = EEPROM.read(EEPROM_NAME_ADDR + 1 + i);
+            if (buf[i] == '\0') break;
+        }
+        buf[EEPROM_NAME_MAX - 1] = '\0';
+        if (is_valid_name(buf)) {
+            strncpy(s_device_name, buf, sizeof(s_device_name) - 1);
+            s_device_name[sizeof(s_device_name) - 1] = '\0';
+        }
+    }
+    EEPROM.end();
+}
+
 static bool http_post(const char *path, const String &body)
 {
     s_http.begin(s_wifi, String("http://") + s_bridge_host + ":" + s_bridge_port + path);
@@ -83,13 +132,13 @@ static bool register_device(void)
     String body;
     {
         JsonDocument doc;
-        doc["id"] = DEVICE_ID;
+        doc["id"] = s_device_id;
         doc["type"] = get_device_type_string();
-        doc["name"] = DEVICE_NAME;
+        doc["name"] = s_device_name;
         doc["ip"] = WiFi.localIP().toString();
         serializeJson(doc, body);
     }
-    Serial.printf("[%s] Registering device: %s\n", TAG, DEVICE_ID);
+    Serial.printf("[%s] Registering device: %s\n", TAG, s_device_id);
     bool ok = http_post("/api/device/register", body);
     if (ok) {
         Serial.printf("[%s] Device registered successfully\n", TAG);
@@ -124,7 +173,7 @@ static void send_state(bool force)
     String body;
     {
         JsonDocument doc;
-        doc["id"] = DEVICE_ID;
+        doc["id"] = s_device_id;
 
         if (strcmp(type, "onoff") == 0) {
             doc["on"] = s_onoff_state;
@@ -171,7 +220,7 @@ static void poll_commands(void)
 {
     if (!s_bridge_connected) return;
 
-    String url = String("http://") + s_bridge_host + ":" + s_bridge_port + "/api/device/commands?id=" + DEVICE_ID;
+    String url = String("http://") + s_bridge_host + ":" + s_bridge_port + "/api/device/commands?id=" + s_device_id;
 
     s_http.begin(s_wifi, url);
     int code = s_http.GET();
@@ -258,7 +307,7 @@ static void maintain_bridge_discovery(void)
             JsonDocument req;
             req["service"] = "esp-rmaker-gateway";
             req["discover"] = true;
-            req["id"] = DEVICE_ID;
+            req["id"] = s_device_id;
             String payload;
             serializeJson(req, payload);
             s_udp.beginPacket(IPAddress(255, 255, 255, 255), DISCOVERY_PORT);
@@ -274,7 +323,7 @@ static bool discover_bridge(void)
     JsonDocument req;
     req["service"] = "esp-rmaker-gateway";
     req["discover"] = true;
-    req["id"] = DEVICE_ID;
+    req["id"] = s_device_id;
     String payload;
     serializeJson(req, payload);
 
@@ -346,11 +395,19 @@ static bool wifi_setup(bool force_config_portal = false)
     wifiManager.addParameter(&custom_bridge_host);
     wifiManager.addParameter(&custom_bridge_port);
 
+    WiFiManagerParameter custom_dev_name("dev_name", "Device Name", s_device_name, 48);
+    wifiManager.addParameter(&custom_dev_name);
+
     if (wifiManager.startConfigPortal("ESP8266_Bridge", "password123")) {
         if (strlen(custom_bridge_host.getValue()) > 0) {
             strcpy(s_bridge_host, custom_bridge_host.getValue());
             s_bridge_port = atoi(custom_bridge_port.getValue());
             if (s_bridge_port == 0) s_bridge_port = BRIDGE_PORT;
+        }
+        if (strlen(custom_dev_name.getValue()) > 0 && strcmp(s_device_name, custom_dev_name.getValue()) != 0) {
+            strncpy(s_device_name, custom_dev_name.getValue(), sizeof(s_device_name) - 1);
+            s_device_name[sizeof(s_device_name) - 1] = '\0';
+            save_device_name(s_device_name);
         }
         s_wifi_configuration_mode = false;
         return true;
@@ -480,11 +537,12 @@ static void handle_api_state(void)
     {
         JsonDocument doc;
         doc["state"] = s_onoff_state;
-        doc["device_id"] = DEVICE_ID;
-        doc["device_name"] = DEVICE_NAME;
+        doc["device_id"] = s_device_id;
+        doc["device_name"] = s_device_name;
         doc["ip"] = WiFi.localIP().toString();
         doc["rssi"] = WiFi.RSSI();
         doc["uptime_s"] = (millis() - s_start_time) / 1000;
+        doc["bridge_connected"] = s_bridge_connected;
         serializeJson(doc, json);
     }
     s_server.send(200, "application/json", json);
@@ -501,8 +559,14 @@ void setup(void)
     delay(1000);
     s_start_time = millis();
 
+    uint32_t chip_id = ESP.getChipId();
+    snprintf(s_device_id, sizeof(s_device_id), "esp8266_%06x", chip_id);
+
+    load_device_name();
+
     Serial.printf("\n[%s] ESP8266 Bridge Client v1.0\n", TAG);
-    Serial.printf("[%s] Device: %s (%s)\n", TAG, DEVICE_ID, get_device_type_string());
+    Serial.printf("[%s] Device: %s (%s)\n", TAG, s_device_id, get_device_type_string());
+    Serial.printf("[%s] Name: %s\n", TAG, s_device_name);
 
     randomSeed(analogRead(A0));
     init_hardware();

@@ -50,10 +50,18 @@ static void device_registry_save(void)
     }
 
     size_t blob_size = sizeof(uint8_t) + count * sizeof(persisted_device_t);
-    err = nvs_set_blob(nvs, NVS_KEY_DEVICES, &count, blob_size);
+    uint8_t *blob = (uint8_t *)malloc(blob_size);
+    if (!blob) {
+        nvs_close(nvs);
+        return;
+    }
+    blob[0] = count;
+    memcpy(&blob[1], pdevs, count * sizeof(persisted_device_t));
+    err = nvs_set_blob(nvs, NVS_KEY_DEVICES, blob, blob_size);
     if (err == ESP_OK) {
         err = nvs_commit(nvs);
     }
+    free(blob);
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "NVS save failed: %s", esp_err_to_name(err));
     }

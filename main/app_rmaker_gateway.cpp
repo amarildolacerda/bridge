@@ -75,7 +75,7 @@ esp_err_t rmaker_gateway_init(void)
     return ESP_OK;
 }
 
-esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const char *name)
+esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type)
 {
     if (!s_initialized || !s_node || !id) return ESP_FAIL;
 
@@ -96,19 +96,20 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
         return ESP_ERR_NO_MEM;
     }
 
+    const char *rmaker_name = dev->name;
     esp_rmaker_device_t *rmaker_dev = NULL;
 
     switch (type) {
     case DEVICE_TYPE_ON_OFF:
-        rmaker_dev = esp_rmaker_switch_device_create(name, priv_id, false);
+        rmaker_dev = esp_rmaker_switch_device_create(rmaker_name, priv_id, false);
         break;
 
     case DEVICE_TYPE_DIMMABLE:
-        rmaker_dev = esp_rmaker_lightbulb_device_create(name, priv_id, false);
+        rmaker_dev = esp_rmaker_lightbulb_device_create(rmaker_name, priv_id, false);
         break;
 
     case DEVICE_TYPE_TEMPERATURE_SENSOR: {
-        rmaker_dev = esp_rmaker_temp_sensor_device_create(name, priv_id, 0.0f);
+        rmaker_dev = esp_rmaker_temp_sensor_device_create(rmaker_name, priv_id, 0.0f);
         if (rmaker_dev) {
             esp_rmaker_param_t *hum = esp_rmaker_param_create("Humidity", NULL, esp_rmaker_float(0.0f), PROP_FLAG_READ);
             if (hum) esp_rmaker_device_add_param(rmaker_dev, hum);
@@ -117,7 +118,7 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
     }
 
     case DEVICE_TYPE_HUMIDITY_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
         if (rmaker_dev) {
             esp_rmaker_param_t *hum = esp_rmaker_param_create("Humidity", NULL, esp_rmaker_float(0.0f), PROP_FLAG_READ);
             if (hum) esp_rmaker_device_add_param(rmaker_dev, hum);
@@ -126,7 +127,7 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
     }
 
     case DEVICE_TYPE_CONTACT_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
         if (rmaker_dev) {
             esp_rmaker_param_t *contact = esp_rmaker_param_create("Contact", NULL, esp_rmaker_bool(false), PROP_FLAG_READ);
             if (contact) esp_rmaker_device_add_param(rmaker_dev, contact);
@@ -135,7 +136,7 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
     }
 
     case DEVICE_TYPE_OCCUPANCY_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
         if (rmaker_dev) {
             esp_rmaker_param_t *occ = esp_rmaker_param_create("Occupancy", NULL, esp_rmaker_bool(false), PROP_FLAG_READ);
             if (occ) esp_rmaker_device_add_param(rmaker_dev, occ);
@@ -144,7 +145,7 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
     }
 
     case DEVICE_TYPE_LIGHT_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
         if (rmaker_dev) {
             esp_rmaker_param_t *light = esp_rmaker_param_create("Light", NULL, esp_rmaker_int(0), PROP_FLAG_READ);
             if (light) esp_rmaker_device_add_param(rmaker_dev, light);
@@ -153,7 +154,7 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
     }
 
     case DEVICE_TYPE_TANQUE: {
-        rmaker_dev = esp_rmaker_device_create(name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
         if (rmaker_dev) {
             esp_rmaker_param_t *level = esp_rmaker_param_create("Level", NULL, esp_rmaker_int(0), PROP_FLAG_READ);
             if (level) esp_rmaker_device_add_param(rmaker_dev, level);
@@ -186,7 +187,7 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type, const ch
     }
 
     device_registry_set_rmaker_handle(id, rmaker_dev);
-    ESP_LOGI(TAG, "RainMaker device created: %s (%s)", name, id);
+    ESP_LOGI(TAG, "RainMaker device created: %s (%s)", rmaker_name, id);
     return ESP_OK;
 }
 
