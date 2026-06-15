@@ -9,7 +9,7 @@
 #define BRIDGE_PORT 80
 
 // ── Device Identity ──────────────────────────────────────────────────────────
-#define DEVICE_ID "tanque_1"
+// Device ID é dinâmico: "esp8266_<chip_id>" (gerado via ESP.getChipId() no setup())
 #define DEVICE_TYPE "tanque"
 #define DEVICE_NAME "Caixa D'Agua"
 

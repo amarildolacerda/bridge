@@ -10,12 +10,12 @@
 #include "config.h"
 #include "pages.h"
 
-static const char *TAG = "esp8266-dht11";
+static const char *TAG = "esp8266-dht21";
 
 static WiFiClient s_wifi;
 static HTTPClient s_http;
 static WiFiUDP s_udp;
-static DHT s_dht(DHT_PIN, DHT_TYPE);
+static DHT *s_dht = nullptr;
 
 static unsigned long s_last_state_update = 0;
 static unsigned long s_last_telemetry_update = 0;
@@ -37,6 +37,8 @@ static char s_bridge_host[64] = BRIDGE_HOST;
 static uint16_t s_bridge_port = BRIDGE_PORT;
 static bool s_bridge_discovered = false;
 
+static int s_dht_pin = DHT_PIN;
+static bool s_dht_valid = false;
 static bool s_wifi_configuration_mode = false;
 static unsigned long s_wifi_config_start_time = 0;
 
@@ -165,6 +167,8 @@ static void send_state(bool force)
 {
     if (!s_bridge_discovered || !s_bridge_connected)
         return;
+    if (!s_dht_valid)
+        return;
 
     static float last_temp = -999;
     static float last_hum = -999;
@@ -185,7 +189,7 @@ static void send_state(bool force)
     {
         last_temp = s_temperature;
         last_hum = s_humidity;
-        Serial.printf("[%s] temp=%.1f hum=%.1f\n", TAG, s_temperature, s_humidity);
+        Serial.printf("[%s] temp=%.1f hum=%.1f (GPIO %d)\n", TAG, s_temperature, s_humidity, s_dht_pin);
     }
 }
 
@@ -220,8 +224,22 @@ static void maintain_bridge_discovery(void)
                         strcpy(s_bridge_host, host);
                         s_bridge_port = port;
                         s_bridge_discovered = true;
-                        Serial.printf("[%s] Bridge discovered: %s:%d\n", TAG, s_bridge_host, s_bridge_port);
+                        Serial.printf("[%s] Bridge discovered: http://%s:%d\n", TAG, s_bridge_host, s_bridge_port);
                     }
+                }
+                bool is_ping = doc["ping"] | false;
+                if (is_ping)
+                {
+                    JsonDocument resp;
+                    resp["service"] = "esp-bridge";
+                    resp["discover"] = true;
+                    resp["id"] = s_device_id;
+                    String payload;
+                    serializeJson(resp, payload);
+                    s_udp.beginPacket(IPAddress(255, 255, 255, 255), DISCOVERY_PORT);
+                    s_udp.write((const uint8_t *)payload.c_str(), payload.length());
+                    s_udp.endPacket();
+                    Serial.printf("[%s] Ping response sent\n", TAG);
                 }
             }
         }
@@ -338,7 +356,7 @@ static bool wifi_setup(bool force_config_portal = false)
     WiFiManagerParameter custom_dev_name("dev_name", "Device Name", s_device_name, 48);
     wifiManager.addParameter(&custom_dev_name);
 
-    if (wifiManager.startConfigPortal("ESP8266_DHT11", "password123"))
+    if (wifiManager.startConfigPortal("ESP8266_DHT21", "password123"))
     {
         if (strlen(custom_bridge_host.getValue()) > 0)
         {
@@ -393,39 +411,61 @@ static void maintain_wifi_connection(void)
 
 static void read_sensors(void)
 {
-    static unsigned long last_sensor_read = 0;
-    if (millis() - last_sensor_read > 2000)
+    float temp = s_dht->readTemperature();
+    float hum = s_dht->readHumidity();
+    if (!isnan(temp) && !isnan(hum))
     {
-        float temp = s_dht.readTemperature();
-        float hum = s_dht.readHumidity();
-        if (!isnan(temp) && !isnan(hum))
-        {
-            s_temperature = temp;
-            s_humidity = hum;
-        }
-        else
-        {
-            s_temperature = 22.0 + (random(-30, 30) / 10.0);
-            s_humidity = 50.0 + (random(-100, 100) / 10.0);
-            Serial.printf("[%s] Failed to read DHT sensor, using fallback: %.1f / %.1f\n",
-                          TAG, s_temperature, s_humidity);
-        }
-        static int counter = 0;
-        counter++;
-        if (counter > 100)
-        {
-            counter = 0;
-            s_battery = max(0, s_battery - 1);
-        }
-        last_sensor_read = millis();
+        s_temperature = temp;
+        s_humidity = hum;
+        s_dht_valid = true;
     }
+    else
+    {
+        s_dht_valid = false;
+        s_temperature += (random(-10, 10) / 20.0);
+        s_humidity += (random(-20, 20) / 10.0);
+        if (s_temperature < 18.0) s_temperature = 18.0;
+        if (s_temperature > 30.0) s_temperature = 30.0;
+        if (s_humidity < 30.0) s_humidity = 30.0;
+        if (s_humidity > 70.0) s_humidity = 70.0;
+    }
+    static int counter = 0;
+    counter++;
+    if (counter > 100)
+    {
+        counter = 0;
+        s_battery = max(0, s_battery - 1);
+    }
+}
+
+static int detect_dht_pin(void)
+{
+    const int candidates[] = {DHT_PIN, 4, 12, 13, 14, 0, 2, 15};
+    Serial.printf("[%s] Detectando pino do DHT21...\n", TAG);
+    for (int i = 0; i < (int)(sizeof(candidates) / sizeof(candidates[0])); i++)
+    {
+        int pin = candidates[i];
+        pinMode(pin, INPUT_PULLUP);
+        DHT dht(pin, DHT_TYPE);
+        dht.begin();
+        delay(250);
+        float t = dht.readTemperature();
+        float h = dht.readHumidity();
+        if (!isnan(t) && !isnan(h))
+        {
+            Serial.printf("[%s] DHT21 encontrado no GPIO %d (T=%.1f H=%.1f)\n", TAG, pin, t, h);
+            return pin;
+        }
+    }
+    Serial.printf("[%s] DHT21 nao encontrado, usando GPIO %d\n", TAG, DHT_PIN);
+    return DHT_PIN;
 }
 
 static void init_hardware(void)
 {
-#ifdef DHT_PIN
-    s_dht.begin();
-#endif
+    s_dht_pin = detect_dht_pin();
+    s_dht = new DHT(s_dht_pin, DHT_TYPE);
+    s_dht->begin();
 #ifdef LED_PIN
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
@@ -465,6 +505,93 @@ static void handle_api_state(void)
     s_server.send(200, "application/json", json);
 }
 
+static void handle_serial(void)
+{
+    if (Serial.available() <= 0)
+        return;
+    char c = Serial.read();
+    switch (c)
+    {
+        case 'R':
+        case 'r':
+         // reset
+         ESP.restart();
+
+          break;
+    case 'l':
+    case 'L':
+        Serial.printf("\n--- Leitura forçada ---\n");
+        read_sensors();
+        Serial.printf("  Temperatura: %.1f C%s\n", s_temperature, s_dht_valid ? "" : " (fallback)");
+        Serial.printf("  Umidade:     %.1f %%\n", s_humidity);
+        Serial.printf("  Bateria:     %d %%\n", s_battery);
+        Serial.printf("  DHT21:       GPIO %d\n", s_dht_pin);
+        if (!s_dht_valid)
+            Serial.printf("  (fallback: nao enviado ao bridge)\n");
+        else if (s_bridge_discovered && s_bridge_connected)
+        {
+            s_last_state_update = 0;
+            send_state(true);
+        }
+        else
+        {
+            Serial.printf("  (bridge desconectado)\n");
+        }
+        Serial.printf("------------------------\n\n");
+        break;
+    case 'h':
+    case 'H':
+    case '?':
+        Serial.printf("\n--- Comandos ---\n");
+        Serial.printf("  l    - ler sensores agora\n");
+        Serial.printf("  r    - reset\n");
+        Serial.printf("  s    - status do dispositivo\n");
+        Serial.printf("  t    - testar pinos do DHT21\n");
+        Serial.printf("  h/?  - esta ajuda\n");
+        Serial.printf("  Browser: http://%s\n", WiFi.localIP().toString().c_str());
+        if (s_bridge_discovered)
+            Serial.printf("  Bridge:  http://%s:%d\n", s_bridge_host, s_bridge_port);
+        Serial.printf("  DHT21:   GPIO %d\n", s_dht_pin);
+        Serial.printf("  IP local: %s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("  RSSI:     %d dBm\n", WiFi.RSSI());
+        Serial.printf("  Up:       %lu s\n", (millis() - s_start_time) / 1000);
+        Serial.printf("----------------\n\n");
+        break;
+    case 's':
+    case 'S':
+    {
+        unsigned long up = (millis() - s_start_time) / 1000;
+        Serial.printf("\n--- Status ---\n");
+        Serial.printf("  Dispositivo: %s\n", s_device_id);
+        Serial.printf("  Nome:        %s\n", s_device_name);
+        Serial.printf("  Tipo:        %s\n", get_device_type_string());
+        Serial.printf("  Temperatura: %.1f C%s\n", s_temperature, s_dht_valid ? "" : " (fallback)");
+        Serial.printf("  Umidade:     %.1f %%\n", s_humidity);
+        Serial.printf("  Bateria:     %d %%\n", s_battery);
+        Serial.printf("  DHT21:       GPIO %d\n", s_dht_pin);
+        Serial.printf("  Bridge:      %s:%d (%s)\n", s_bridge_host, s_bridge_port,
+                      s_bridge_connected ? "conectado" : "desconectado");
+        Serial.printf("  Browser:     http://%s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("  RSSI:        %d dBm\n", WiFi.RSSI());
+        Serial.printf("  Uptime:      %lu s\n", up);
+        Serial.printf("---------------\n\n");
+        break;
+    }
+    case 't':
+    case 'T':
+    {
+        Serial.printf("\n--- Teste de pinos DHT21 ---\n");
+        int pin = detect_dht_pin();
+        if (pin >= 0)
+            Serial.printf("  => DHT21 no GPIO %d\n", pin);
+        else
+            Serial.printf("  => DHT21 nao encontrado\n");
+        Serial.printf("----------------------------\n\n");
+        break;
+    }
+    }
+}
+
 void setup(void)
 {
     Serial.begin(115200);
@@ -476,12 +603,18 @@ void setup(void)
 
     load_device_name();
 
-    Serial.printf("\n[%s] ESP8266 DHT11 Bridge Client v1.0\n", TAG);
-    Serial.printf("[%s] Device: %s (%s)\n", TAG, s_device_id, get_device_type_string());
-    Serial.printf("[%s] Name: %s\n", TAG, s_device_name);
+    Serial.printf("\n");
+    Serial.printf("============================================\n");
+    Serial.printf("  ESP8266 Bridge Client v1.0\n");
+    Serial.printf("  Device : %s\n", s_device_id);
+    Serial.printf("  Nome   : %s\n", s_device_name);
+    Serial.printf("  Tipo   : %s\n", get_device_type_string());
+    Serial.printf("============================================\n");
 
     randomSeed(analogRead(A0));
     init_hardware();
+    Serial.printf("  DHT21  : GPIO %d\n", s_dht_pin);
+    Serial.printf("============================================\n");
 
     s_udp.begin(DISCOVERY_PORT);
     Serial.printf("[%s] UDP listener on port %d\n", TAG, DISCOVERY_PORT);
@@ -496,7 +629,8 @@ void setup(void)
     s_server.on("/", handle_root);
     s_server.on("/api/state", handle_api_state);
     s_server.begin();
-    Serial.printf("[%s] Web server at http://%s\n", TAG, WiFi.localIP().toString().c_str());
+    Serial.printf("\n  => Browser: http://%s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("  => Terminal: 'h' comando de ajuda\n");
 
     if (discover_bridge())
     {
@@ -507,11 +641,14 @@ void setup(void)
     {
         Serial.printf("[%s] No bridge available yet, waiting for discovery\n", TAG);
     }
-    Serial.printf("[%s] Ready!\n", TAG);
+    Serial.printf("============================================\n");
+    Serial.printf("  Pronto! Pressione 'h' para ajuda\n");
+    Serial.printf("============================================\n\n");
 }
 
 void loop(void)
 {
+    handle_serial();
     check_config_portal_timeout();
     s_server.handleClient();
 

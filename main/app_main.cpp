@@ -11,6 +11,7 @@
 #include "app_device_registry.h"
 #include "app_rmaker_gateway.h"
 #include "app_wifi_server.h"
+#include "app_console.h"
 
 static const char *TAG = "app_main";
 
@@ -65,6 +66,9 @@ extern "C" void app_main()
     ESP_ERROR_CHECK(esp_event_handler_register(APP_NETWORK_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
 
     ESP_ERROR_CHECK(rmaker_gateway_init());
+    esp_rmaker_start();
+
+    ESP_ERROR_CHECK(app_network_start(POP_TYPE_NONE));
 
     int loaded = device_registry_get_loaded_count();
     if (loaded > 0) {
@@ -83,15 +87,6 @@ extern "C" void app_main()
         }
     }
 
-    esp_rmaker_start();
-
-    err = app_network_start(POP_TYPE_RANDOM);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Could not start WiFi. Aborting!!!");
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-        abort();
-    }
-
     esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     if (netif) {
         esp_netif_ip_info_t ip_info;
@@ -103,6 +98,8 @@ extern "C" void app_main()
     }
 
     ESP_ERROR_CHECK(wifi_server_start());
+
+    ESP_ERROR_CHECK(console_init());
 
     ESP_LOGI(TAG, "ESP RainMaker Gateway started");
 }

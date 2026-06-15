@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <esp_system.h>
 #include "mdns.h"
+#include <app_network.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -42,15 +43,7 @@ static httpd_handle_t s_ws_hd = NULL;
 static char s_bridge_ip[16] = "0.0.0.0";
 
 // UDP discovery IP cache
-#define MAX_DISCOVERED_IPS 8
 #define DISCOVERED_IP_TIMEOUT_US (300 * 1000000LL)
-
-typedef struct
-{
-    char id[MAX_DEVICE_ID_LEN];
-    char ip[16];
-    int64_t last_seen_us;
-} discovered_ip_t;
 
 static discovered_ip_t s_discovered_ips[MAX_DISCOVERED_IPS];
 
@@ -194,7 +187,7 @@ static void send_udp_broadcast(void)
     char resp[256];
     uint64_t uptime_s = esp_timer_get_time() / 1000000;
     snprintf(resp, sizeof(resp),
-             "{\"service\":\"esp-bridge\",\"ip_sta\":\"%s\",\"http_port\":80,\"uptime_s\":%llu}",
+             "{\"service\":\"esp-bridge\",\"ip_sta\":\"%s\",\"http_port\":80,\"uptime_s\":%llu,\"ping\":true}",
              s_bridge_ip, uptime_s);
 
     struct sockaddr_in bcast_addr;
@@ -962,6 +955,74 @@ static esp_err_t devices_list_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t qrcode_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+    cJSON *resp = cJSON_CreateObject();
+
+    char *service_name = app_network_get_device_service_name();
+    char *pop = app_network_get_device_pop_default();
+
+    cJSON_AddStringToObject(resp, "service_name", service_name ? service_name : "");
+    cJSON_AddStringToObject(resp, "pop", pop ? pop : "");
+#ifdef CONFIG_APP_NETWORK_PROV_TRANSPORT_BLE
+    const char *transport = "ble";
+#else
+    const char *transport = "softap";
+#endif
+    cJSON_AddStringToObject(resp, "transport", transport);
+    cJSON_AddStringToObject(resp, "ver", "v1");
+
+    char qr_payload[256];
+    if (pop)
+    {
+        snprintf(qr_payload, sizeof(qr_payload),
+                 "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"%s\",\"transport\":\"%s\"}",
+                 service_name ? service_name : "", pop, transport);
+    }
+    else
+    {
+        snprintf(qr_payload, sizeof(qr_payload),
+                 "{\"ver\":\"v1\",\"name\":\"%s\",\"transport\":\"%s\"}",
+                 service_name ? service_name : "", transport);
+    }
+    cJSON_AddStringToObject(resp, "qr", qr_payload);
+
+    free(service_name);
+    free(pop);
+
+    const char *resp_str = cJSON_Print(resp);
+    httpd_resp_sendstr(req, resp_str);
+    free((void *)resp_str);
+    cJSON_Delete(resp);
+
+    return ESP_OK;
+}
+
+void wifi_server_broadcast(void)
+{
+    send_udp_broadcast();
+    ESP_LOGI(TAG, "Manual UDP broadcast sent");
+}
+
+int wifi_server_get_discovered_ips(discovered_ip_t *ips, int max)
+{
+    int count = 0;
+    int64_t now = esp_timer_get_time();
+    for (int i = 0; i < MAX_DISCOVERED_IPS && count < max; i++)
+    {
+        if (s_discovered_ips[i].id[0] != '\0' &&
+            now - s_discovered_ips[i].last_seen_us < DISCOVERED_IP_TIMEOUT_US)
+        {
+            memcpy(&ips[count], &s_discovered_ips[i], sizeof(discovered_ip_t));
+            count++;
+        }
+    }
+    return count;
+}
+
 esp_err_t wifi_server_start(void)
 {
     if (s_server)
@@ -1061,6 +1122,13 @@ esp_err_t wifi_server_start(void)
         .handler = reset_handler,
         .user_ctx = NULL};
     httpd_register_uri_handler(s_server, &reset_uri);
+
+    httpd_uri_t qrcode_uri = {
+        .uri = "/api/qrcode",
+        .method = HTTP_GET,
+        .handler = qrcode_handler,
+        .user_ctx = NULL};
+    httpd_register_uri_handler(s_server, &qrcode_uri);
 
     httpd_uri_t root_uri = {
         .uri = "/",

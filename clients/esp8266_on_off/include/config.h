@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define DEVICE_ID "esp8266_living_room"
+// Device ID é dinâmico: "esp8266_<chip_id>" (gerado via ESP.getChipId() no setup())
 #define DEVICE_NAME "Luz Sala"
 
 #define DEVICE_TYPE_ONOFF 1

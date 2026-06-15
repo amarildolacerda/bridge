@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define DEVICE_ID "temperatura_sala"
+// Device ID é dinâmico: "esp8266_<chip_id>" (gerado via ESP.getChipId() no setup())
 #define DEVICE_NAME "Temperatura Sala"
 
 #define DEVICE_TYPE_ONOFF 1
@@ -27,9 +27,6 @@
 #define BUTTON_PIN 5
 #endif
 
-#if DEVICE_TYPE == DEVICE_TYPE_TEMPERATURE
 #define DHT_PIN 4
-#define DHT_TYPE DHT11
-#endif
-
+#define DHT_TYPE DHT21
 #define LED_PIN 2

@@ -90,13 +90,47 @@ Gateway bridge para conectar dispositivos **ESP8266/ESP32** à **Alexa** via **E
 | `light_sensor` | Luminosidade | device_create + Light | 0x0106 (Light Sensor) |
 | `tanque` | Nível d'água | device_create + Level | — |
 
+## Como preparar o ambiente
+
+### Pré-requisitos
+
+```bash
+sudo apt install ccache git curl
+```
+> `ccache` acelera rebuilds em até 10x.
+
+### ESP-IDF
+
+```bash
+mkdir -p ~/.espressif/v5.5.4
+git clone --recursive -b v5.5.4 https://github.com/espressif/esp-idf.git ~/.espressif/v5.5.4/esp-idf
+```
+
+> Se o clone falhar por falta de internet, reconecte a rede e execute:
+> ```bash
+> git -C ~/.espressif/v5.5.4/esp-idf submodule update --init --recursive
+> ```
+
+### RainMaker
+
+```bash
+git clone --recursive -b v1.8.2 https://github.com/espressif/esp-rainmaker.git ~/esp/esp-rainmaker
+```
+
+### Ativar ambiente
+
+```bash
+source config.sh    # carrega IDF + RainMaker + ccache
+```
+
+Após ativar, use `idf.py build` para compilar.
+
 ## Build
 
 ### RainMaker Gateway
 
 ```bash
-export RMAKER_PATH=/opt/espressif/esp-rainmaker
-idf.py set-target esp32
+source config.sh
 idf.py build
 idf.py -p /dev/ttyUSB0 flash monitor
 ```

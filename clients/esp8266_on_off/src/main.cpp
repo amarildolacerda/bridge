@@ -335,6 +335,20 @@ static void maintain_bridge_discovery(void)
                         Serial.printf("[%s] Bridge discovered: %s:%d\n", TAG, s_bridge_host, s_bridge_port);
                     }
                 }
+                bool is_ping = doc["ping"] | false;
+                if (is_ping)
+                {
+                    JsonDocument resp;
+                    resp["service"] = "esp-bridge";
+                    resp["discover"] = true;
+                    resp["id"] = s_device_id;
+                    String payload;
+                    serializeJson(resp, payload);
+                    s_udp.beginPacket(IPAddress(255, 255, 255, 255), DISCOVERY_PORT);
+                    s_udp.write((const uint8_t *)payload.c_str(), payload.length());
+                    s_udp.endPacket();
+                    Serial.printf("[%s] Ping response sent\n", TAG);
+                }
             }
         }
     }
@@ -618,6 +632,93 @@ static void handle_root(void)
     s_server.send(200, "text/html", FPSTR(PAGE_DASHBOARD));
 }
 
+static void handle_serial(void)
+{
+    if (Serial.available() <= 0)
+        return;
+    char c = Serial.read();
+    switch (c)
+    {
+    case 'o':
+    case 'O':
+        Serial.printf("\n--- Comando: ON ---\n");
+        s_onoff_state = true;
+#ifdef RELAY_PIN
+        digitalWrite(RELAY_PIN, HIGH);
+#endif
+        Serial.printf("  Estado: ON\n");
+        if (s_bridge_connected)
+            send_state(true);
+        Serial.printf("-------------------\n\n");
+        break;
+    case 'f':
+    case 'F':
+        Serial.printf("\n--- Comando: OFF ---\n");
+        s_onoff_state = false;
+#ifdef RELAY_PIN
+        digitalWrite(RELAY_PIN, LOW);
+#endif
+        Serial.printf("  Estado: OFF\n");
+        if (s_bridge_connected)
+            send_state(true);
+        Serial.printf("--------------------\n\n");
+        break;
+    case 't':
+    case 'T':
+        s_onoff_state = !s_onoff_state;
+#ifdef RELAY_PIN
+        digitalWrite(RELAY_PIN, s_onoff_state ? HIGH : LOW);
+#endif
+        Serial.printf("\n--- Comando: TOGGLE ---\n");
+        Serial.printf("  Estado: %s\n", s_onoff_state ? "ON" : "OFF");
+        if (s_bridge_connected)
+            send_state(true);
+        Serial.printf("----------------------\n\n");
+        break;
+    case 's':
+    case 'S':
+    {
+        unsigned long up = (millis() - s_start_time) / 1000;
+        Serial.printf("\n--- Status ---\n");
+        Serial.printf("  Dispositivo: %s\n", s_device_id);
+        Serial.printf("  Nome:        %s\n", s_device_name);
+        Serial.printf("  Tipo:        %s\n", get_device_type_string());
+        Serial.printf("  Estado:      %s\n", s_onoff_state ? "ON" : "OFF");
+        Serial.printf("  Bridge:      %s:%d (%s)\n", s_bridge_host, s_bridge_port,
+                      s_bridge_connected ? "conectado" : "desconectado");
+        Serial.printf("  Browser:     http://%s\n", WiFi.localIP().toString().c_str());
+        Serial.printf("  RSSI:        %d dBm\n", WiFi.RSSI());
+        Serial.printf("  Uptime:      %lu s\n", up);
+        Serial.printf("---------------\n\n");
+        break;
+    }
+    case 'r':
+    case 'R':
+        Serial.printf("\n--- Restart ---\n");
+        Serial.printf("  Reiniciando...\n");
+        delay(500);
+        ESP.restart();
+        break;
+    case 'h':
+    case 'H':
+    case '?':
+        Serial.printf("\n--- Comandos ---\n");
+        Serial.printf("  o    - ligar relay\n");
+        Serial.printf("  f    - desligar relay\n");
+        Serial.printf("  t    - toggle relay\n");
+        Serial.printf("  s    - status do dispositivo\n");
+        Serial.printf("  r    - restart\n");
+        Serial.printf("  h/?  - esta ajuda\n");
+        Serial.printf("  Browser: http://%s\n", WiFi.localIP().toString().c_str());
+        if (s_bridge_discovered)
+            Serial.printf("  Bridge:  %s:%d\n", s_bridge_host, s_bridge_port);
+        Serial.printf("  RSSI:     %d dBm\n", WiFi.RSSI());
+        Serial.printf("  Up:       %lu s\n", (millis() - s_start_time) / 1000);
+        Serial.printf("----------------\n\n");
+        break;
+    }
+}
+
 void setup(void)
 {
     Serial.begin(115200);
@@ -629,9 +730,13 @@ void setup(void)
 
     load_device_name();
 
-    Serial.printf("\n[%s] ESP8266 Bridge Client v1.0\n", TAG);
-    Serial.printf("[%s] Device: %s (%s)\n", TAG, s_device_id, get_device_type_string());
-    Serial.printf("[%s] Name: %s\n", TAG, s_device_name);
+    Serial.printf("\n");
+    Serial.printf("============================================\n");
+    Serial.printf("  ESP8266 Bridge Client v1.0\n");
+    Serial.printf("  Device : %s\n", s_device_id);
+    Serial.printf("  Nome   : %s\n", s_device_name);
+    Serial.printf("  Tipo   : %s\n", get_device_type_string());
+    Serial.printf("============================================\n");
 
     randomSeed(analogRead(A0));
     init_hardware();
@@ -652,7 +757,8 @@ void setup(void)
     s_server.on("/api/off", HTTP_POST, handle_api_off);
     s_server.on("/api/toggle", HTTP_POST, handle_api_toggle);
     s_server.begin();
-    Serial.printf("[%s] Web server at http://%s\n", TAG, WiFi.localIP().toString().c_str());
+    Serial.printf("\n  => Browser: http://%s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("  => Terminal: 'h' comando de ajuda\n");
 
     if (discover_bridge())
     {
@@ -663,11 +769,14 @@ void setup(void)
     {
         Serial.printf("[%s] No bridge available yet, waiting for discovery\n", TAG);
     }
-    Serial.printf("[%s] Ready!\n", TAG);
+    Serial.printf("============================================\n");
+    Serial.printf("  Pronto! Pressione 'h' para ajuda\n");
+    Serial.printf("============================================\n\n");
 }
 
 void loop(void)
 {
+    handle_serial();
     check_config_portal_timeout();
     s_server.handleClient();
 

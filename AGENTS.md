@@ -1,19 +1,92 @@
-* observações
-1. O comando `echo` é usado para imprimir texto na saída padrão (geralmente o terminal).
-2. nao executa build automaticamente, apenas imprime a mensagem "build" no terminal.
-3. se for fazer build, usar cached para evitar recompilar tudo do zero, o que pode economizar tempo e recursos.
-4. O comando `echo` é útil para depuração e para fornecer feedback ao usuário durante
-5. html deve ficar na pasta public, para ser servido corretamente pelo servidor web.
-6. os codigos devem ter classes e arquivos dedicados por finalidade
-7. Ponteiros `const char*` para memória interna do cJSON viram dangling após `cJSON_Delete()`. Copiar com `strncpy` para buffer local antes de deletar.
-8. Service name UDP discovery (`"esp-bridge"`) precisa ser idêntico no cliente e no gateway, senão o discovery nunca responde.
-9. Cliente deve ter retry de registro no `loop()`, não apenas uma chamada no `setup()`.
-10. `httpd_accept_conn: error in accept (23)` = `ENFILE` — limite de sockets. Aumentar `CONFIG_LWIP_MAX_SOCKETS` no `sdkconfig` e configurar `max_open_sockets`, `keep_alive_enable`, `lru_purge_enable` no HTTP server.
-11. `PROP_FLAG_READ` como flag de params RainMaker para sensores (só leitura).
-12. Para enviar temperatura+umidade juntos no RainMaker, o device `TEMPERATURE_SENSOR` precisa criar manualmente o param `"Humidity"` extra, pois o `esp_rmaker_temp_sensor_device_create` padrão só cria `Temperature`.
-13. Separar heartbeat (alive, sem MQTT) de dados (só envia HTTP quando o valor muda) para economizar orçamento MQTT do RainMaker e evitar `Out of MQTT Budget`.
-14. Usar NVS (`nvs_set_blob`/`nvs_get_blob`) para persistir lista de devices bridged, restaurando no boot para evitar rediscovery na Alexa após reboot.
-15. o identificar do serviço de troca de mensagem entre clients e bridge é " esp-bridge"
-```sh
+# ESP32 Bridge + ESP8266 Clients — Projeto
 
+## Branches
+- `main` — estável, usado nos dispositivos em produção
+- `dev` — desenvolvimento
+- `main-v0.0.3` — backup do main anterior (antes do reset para dev)
+- antes de passar o dev para main gerar um branch do main_vx.x.x
+
+## Ambiente
+
+### Pré-requisitos
+- `sudo apt install ccache git curl` — ccache acelera rebuilds
+- Python 3.10+ com `venv`
+
+### ESP-IDF (primeira instalação)
+```sh
+mkdir -p ~/.espressif/v5.5.4
+git clone --recursive -b v5.5.4 https://github.com/espressif/esp-idf.git ~/.espressif/v5.5.4/esp-idf
 ```
+> Se o clone falhar por falta de internet, reconecte a rede e execute:
+> ```sh
+> git -C ~/.espressif/v5.5.4/esp-idf submodule update --init --recursive
+> ```
+
+### RainMaker
+```sh
+git clone --recursive -b v1.8.2 https://github.com/espressif/esp-rainmaker.git ~/esp/esp-rainmaker
+```
+
+## Build
+1. `source config.sh` carrega IDF v5.5.4 + RMAKER_PATH (ativa ccache automaticamente)
+2. `idf.py build` compila bridge ESP32
+3. Clientes ESP8266: compilar separadamente (Arduino IDE / PlatformIO)
+
+## Scripts
+- `build.sh` — só build
+- `flash.sh [-p <port>]` — source + build + flash (porta padrão `/dev/ttyUSB0`)
+- `monitor.sh` — source + monitor (saída: `Ctrl+]`)
+- `monitor.py` — monitor serial Python, sai com `q` ou `Ctrl+C`
+- `erase.sh` — source + erase-flash
+
+## Arquitetura
+- Bridge (ESP32/IDF): servidor HTTP REST + RainMaker + discovery UDP + terminal serial
+- Clients (ESP8266/Arduino): sensores/atuadores que se registram no bridge via HTTP
+- Discovery UDP: broadcast porta 5000, service name `"esp-bridge"`
+
+## Terminal do Bridge (console serial)
+- `l` — lista devices registrados (com índices numéricos)
+- `s` — status do bridge (IP, total devices, uptime)
+- `d <id|índice>` — detalhes de um device (aceita ID ou número da lista `l`)
+- `b` — broadcast ping (envia `ping:true` via UDP, espera 3s, mostra descobertos + registrados)
+- `r` — restart
+- `h` / `?` — ajuda
+- Usa `getchar()` single-key, prompt `bridge>` só aparece após comando executado
+
+## Provisionamento WiFi
+- Bridge usa **BLE** (não SoftAP): quando não há credenciais STA salvas, inicia BLE advertising `PROV_<nome>`
+- Provisionamento feito via app ESP RainMaker (escaneia QR code ou conecta via BLE)
+- POP_TYPE_NONE + Security v1 — sem PIN, app conecta direto
+- QR code gerado com `app_network_get_device_service_name()` + `app_network_get_device_pop(POP_TYPE_RANDOM)` no dashboard em `/api/qrcode`
+- Após provisionamento via BLE, bridge conecta ao WiFi e inicia RainMaker cloud
+- `app_main.cpp` — init: network → event handlers → rmaker_gateway → esp_rmaker_start → app_network_start (BLE, POP_TYPE_NONE)
+
+## Desenvolvimento
+- Alterações de código devem ser feitas apenas no branch `dev`. Verifique com `git branch --show-current` antes de começar.
+- `main` é estável e usado em produção — nunca commitar diretamente em `main`.
+### Novos Clients
+1. sempre ter um README.md para orientar as conexões de hardwares/pinos e demais informações releventes ao cliente
+2. ter um dashboard pertinent 
+3. se possivel ter configuração WIFI com WiFiManager
+4. ter atalhos de teclados no terminal
+5. seguir API do gateway
+
+## Regras importantes
+1. Device ID é dinâmico (`esp8266_<chip_id>`), não configurável
+2. Device name configurável via WiFiManager, salvo em EEPROM com validação (> 32, < 127)
+3. BRIDGE_HOST = "0.0.0.0" força discovery UDP (sem fallback fixo)
+4. Sempre copiar cJSON `valuestring` para buffer local com `strncpy` antes de `cJSON_Delete`
+5. Retry de registro no `loop()`, não só no `setup()`
+6. `CONFIG_LWIP_MAX_SOCKETS` precisa ser aumentado se aparecer `ENFILE`
+7. Persistir devices bridgeados em NVS para restaurar no boot
+8. Clients enviam `bridge_connected` no `/api/state`
+9. DHT21 client: GPIO 5, tipo DHT21, fallback `isnan()` não envia ao bridge (flag `s_dht_valid`)
+10. Clients respondem a `ping:true` no UDP enviando `{"discover":true,"id":"..."}` de volta
+11. Bridge broadcast (`b`): envia `ping:true` via UDP, mostra IPs descobertos + devices registrados
+12. Dashboard web tem card QR code do RainMaker em `/api/qrcode`
+
+## Regras de AI
+0. economizar tokens com respostas minimas sem explicações desnecessaria 
+1. manter skills enxutas
+2. economizar tokens simplificando com a comunição
+3. manter uma comunicação objetiva sem rodeios
