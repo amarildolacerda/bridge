@@ -162,6 +162,17 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type)
         break;
     }
 
+    case DEVICE_TYPE_GAS_SENSOR: {
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        if (rmaker_dev) {
+            esp_rmaker_param_t *gas = esp_rmaker_param_create("GasLevel", NULL, esp_rmaker_int(0), PROP_FLAG_READ);
+            if (gas) esp_rmaker_device_add_param(rmaker_dev, gas);
+            esp_rmaker_param_t *alarm = esp_rmaker_param_create("GasAlarm", NULL, esp_rmaker_bool(false), PROP_FLAG_READ);
+            if (alarm) esp_rmaker_device_add_param(rmaker_dev, alarm);
+        }
+        break;
+    }
+
     default:
         ESP_LOGE(TAG, "Unsupported device type: %d", type);
         free(priv_id);
@@ -255,6 +266,12 @@ esp_err_t rmaker_gateway_device_update_state(const char *id, const char *key, co
     } else if (strcmp(key, "light_level") == 0) {
         param_name = "Light";
         param_val = esp_rmaker_int(atoi(value));
+    } else if (strcmp(key, "gas_level") == 0) {
+        param_name = "GasLevel";
+        param_val = esp_rmaker_int(atoi(value));
+    } else if (strcmp(key, "alarm") == 0) {
+        param_name = "GasAlarm";
+        param_val = esp_rmaker_bool(strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
     } else {
         ESP_LOGW(TAG, "Unknown state key: %s for device %s", key, id);
         return ESP_ERR_NOT_SUPPORTED;

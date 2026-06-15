@@ -14,8 +14,9 @@ Gateway bridge para conectar dispositivos **ESP8266/ESP32** à **Alexa** via **E
 | Cliente | Tipo | Plataforma | Descrição |
 |---|---|---|---|
 | `clients/esp8266_on_off/` | Interruptor on/off | ESP8266 + PlatformIO | Relé + botão físico |
-| `clients/esp8266_dh11/` | Temperatura/Umidade | ESP8266 + PlatformIO | Sensor DHT11 |
+| `clients/esp8266_dht21/` | Temperatura/Umidade | ESP8266 + PlatformIO | Sensor DHT21 |
 | `clients/esp8266_tanque/` | Nível d'água | ESP8266 + PlatformIO | Sensor ultrassônico HC-SR04 |
+| `clients/esp8266_gas/` | Detector de gás | ESP8266 + PlatformIO | Sensor MQ-2/5/7/135 |
 | `clients/esp32_mqtt/` | Broker MQTT local | ESP32 + PlatformIO | Bridge MQTT standalone |
 
 ## Arquitetura
@@ -67,6 +68,13 @@ Gateway bridge para conectar dispositivos **ESP8266/ESP32** à **Alexa** via **E
 | POST | `/api/gateway/reset` | Reiniciar gateway |
 | GET | `/ws` | WebSocket (Matter) |
 
+### Cliente gas
+
+| Método | Rota | Descrição |
+|--------|------|-----------|
+| GET | `/` | Dashboard local |
+| GET | `/api/state` | Estado (gas_level, alarm) |
+
 ### Cliente on/off
 
 | Método | Rota | Descrição |
@@ -89,6 +97,7 @@ Gateway bridge para conectar dispositivos **ESP8266/ESP32** à **Alexa** via **E
 | `occupancy` | Sensor de presença | device_create + Occupancy | 0x0107 (Occupancy Sensor) |
 | `light_sensor` | Luminosidade | device_create + Light | 0x0106 (Light Sensor) |
 | `tanque` | Nível d'água | device_create + Level | — |
+| `gas` | Detector de gás | device_create + GasLevel / GasAlarm | — |
 
 ## Como preparar o ambiente
 

@@ -158,6 +158,7 @@ device_type_t device_type_from_string(const char *type_str)
     if (strcmp(type_str, "occupancy") == 0) return DEVICE_TYPE_OCCUPANCY_SENSOR;
     if (strcmp(type_str, "light_sensor") == 0) return DEVICE_TYPE_LIGHT_SENSOR;
     if (strcmp(type_str, "tanque") == 0) return DEVICE_TYPE_TANQUE;
+    if (strcmp(type_str, "gas") == 0) return DEVICE_TYPE_GAS_SENSOR;
     return DEVICE_TYPE_UNKNOWN;
 }
 
@@ -172,6 +173,7 @@ const char *device_type_to_string(device_type_t type)
     case DEVICE_TYPE_OCCUPANCY_SENSOR: return "occupancy";
     case DEVICE_TYPE_LIGHT_SENSOR: return "light_sensor";
     case DEVICE_TYPE_TANQUE: return "tanque";
+    case DEVICE_TYPE_GAS_SENSOR: return "gas";
     default: return "unknown";
     }
 }

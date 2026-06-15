@@ -62,6 +62,7 @@ if('on' in st)stHtml='<span class="'+(st.on?'state-on':'state-off')+'">'+(st.on?
 else if('temperature' in st)stHtml=st.temperature.toFixed(1)+'\u00B0C '+(st.humidity!=null?st.humidity.toFixed(0)+'%':'');
 else if('contact' in st)stHtml=st.contact?'ABERTO':'FECHADO';
 else if('occupancy' in st)stHtml=st.occupancy?'MOVIMENTO':'LIVRE';
+else if('gas_level' in st)stHtml=st.gas_level+'%'+(st.alarm?' <span style="color:#C62828">\u26A0 ALARME</span>':' <span style="color:#2E7D32">\u2713 Seguro</span>');
 else stHtml='<span style="color:#7A8BA3">—</span>';
 let ipLink=dev.ip&&dev.ip!='0.0.0.0'?'<a href="http://'+dev.ip+'" target="_blank" style="color:#3498DB;text-decoration:none">'+dev.ip+'</a>':'—';
 h+='<div class="device">'+
