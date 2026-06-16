@@ -20,6 +20,7 @@
 #define BRIDGE_PORT 80
 
 #define RAIN_ANALOG_PIN A0
+#define RAIN_DIGITAL_PIN 16
 #define LED_PIN 2
 
 #define RAIN_DRY_THRESHOLD 90

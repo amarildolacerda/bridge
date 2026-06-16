@@ -19,6 +19,7 @@ Cliente ESP8266 para sensor de chuva. Envia nível de chuva para o bridge via HT
 | Componente          | GPIO |
 |---------------------|------|
 | Sensor (analógico)  | A0   |
+| Sensor (digital)    | 16   |
 | LED                 | 2    |
 
 ## Faixas de leitura
@@ -27,10 +28,10 @@ O ADC 0–1024 é mapeado linearmente para 0–100%.
 
 | % chuva   | Classificação |
 |-----------|---------------|
-| 90–100%   | Seco          |
-| 60–89%    | Chuviscando   |
-| 30–59%    | Chovendo      |
-| 0–29%     | Chuva forte   |
+| 0–10%     | Seco          |
+| 11–40%    | Chuviscando   |
+| 41–70%    | Chovendo      |
+| 71–100%   | Chuva forte   |
 
 ## Configuração
 
@@ -54,7 +55,7 @@ Tipo registrado: `"rain"`
 
 Estado enviado:
 ```json
-{"id":"esp8266_xxxxxx","rain_level":42}
+{"id":"esp8266_xxxxxx","rain_level":42,"rain_digital":false}
 ```
 
 ## API local (no ESP8266)

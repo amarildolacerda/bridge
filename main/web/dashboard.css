@@ -172,6 +172,37 @@ h1 {
   color: var(--danger);
 }
 
+.badge-rain {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 72px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-rain.seco { background: rgba(46,125,50,0.12); color: var(--success); }
+.badge-rain.chuviscando { background: rgba(255,152,0,0.12); color: #e65100; }
+.badge-rain.chovendo { background: rgba(25,118,210,0.12); color: #1565c0; }
+.badge-rain.forte { background: rgba(198,40,40,0.12); color: var(--danger); }
+
+.badge-digital {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-left: 6px;
+}
+.badge-digital.chuva { background: rgba(25,118,210,0.12); color: #1565c0; }
+.badge-digital.seco { background: rgba(46,125,50,0.12); color: var(--success); }
+
 .device-list {
   display: flex;
   flex-direction: column;

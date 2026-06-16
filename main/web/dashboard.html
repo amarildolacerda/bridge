@@ -118,7 +118,7 @@ else if('temperature' in st)stHtml=st.temperature.toFixed(1)+'\u00B0C '+(st.humi
 else if('contact' in st)stHtml=st.contact?'ABERTO':'FECHADO';
 else if('occupancy' in st)stHtml=st.occupancy?'MOVIMENTO':'LIVRE';
 else if('gas_level' in st)stHtml=st.gas_level+'%'+(st.alarm?' <span style="color:#C62828">\u26A0 ALARME</span>':' <span style="color:#2E7D32">\u2713 Seguro</span>');
-else if('rain_level' in st)stHtml=st.rain_level+'% <span style="color:#1976D2">\u2614 Chuva</span>';
+else if('rain_level' in st){let r=st.rain_level;let cls=r<=10?'seco':r<=40?'chuviscando':r<=70?'chovendo':'forte';let icon=r<=10?'\u2600\ufe0f':r<=40?'\u26c5':'\u2614';let label=r<=10?'Seco':r<=40?'Chuviscando':r<=70?'Chovendo':'Chuva Forte';let digCls=st.rain_digital===true?'chuva':'seco';let digIcon=st.rain_digital===true?'\u2614':'\u2600\ufe0f';let digLabel=st.rain_digital===true?'Digital: Chuva':'Digital: Seco';stHtml=r+'% <span class="badge-rain '+cls+'">'+icon+' '+label+'</span>'+(st.rain_digital!==undefined?' <span class="badge-digital '+digCls+'">'+digIcon+' '+digLabel+'</span>':'');}
 else stHtml='<span style="color:#7A8BA3">—</span>';
 let ipLink=dev.ip&&dev.ip!='0.0.0.0'?'<a href="http://'+dev.ip+'" target="_blank" style="color:#3498DB;text-decoration:none">'+dev.ip+'</a>':'—';
 let lastSeen='';

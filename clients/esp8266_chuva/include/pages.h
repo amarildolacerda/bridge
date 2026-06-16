@@ -9,25 +9,28 @@ static const char PAGE_DASHBOARD[] PROGMEM = R"=====(
 <title>Sensor de Chuva</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1a1d23;color:#e8eaed;min-height:100vh;display:flex;align-items:center;justify-content:center}
-.card{background:#282c34;border-radius:16px;padding:32px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
-h1{font-size:1.5rem;margin-bottom:8px;color:#8ab4f8}
-.sub{color:#7A8BA3;font-size:.9rem;margin-bottom:24px}
-.level{font-size:4rem;font-weight:700;margin:16px 0}
-.level.dry{color:#4CAF50}
-.level.light{color:#FF9800}
-.level.wet{color:#1976D2}
-.level.heavy{color:#C62828}
-.badge{display:inline-block;padding:4px 16px;border-radius:20px;font-size:.85rem;font-weight:600;margin-bottom:16px}
-.badge.dry{background:#1b5e20;color:#81c784}
-.badge.light{background:#e65100;color:#ffcc80}
-.badge.wet{background:#0d47a1;color:#90caf9}
-.badge.heavy{background:#b71c1c;color:#ef9a9a}
-.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
-.meta-item{background:#1a1d23;border-radius:12px;padding:12px}
-.meta-label{font-size:.75rem;color:#7A8BA3;text-transform:uppercase}
-.meta-value{font-size:1.1rem;font-weight:600;margin-top:4px}
-.footer{margin-top:24px;color:#7A8BA3;font-size:.8rem}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f7fc;color:#2c3e50;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#fff;border-radius:12px;padding:24px;max-width:360px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+h1{font-size:1.3rem;margin-bottom:4px;color:#b2cefe;font-weight:700}
+.sub{color:#7a8ba3;font-size:.85rem;margin-bottom:20px}
+.level{font-size:4rem;font-weight:700;margin:12px 0}
+.level.dry{color:#4caf50}
+.level.light{color:#ff9800}
+.level.wet{color:#1976d2}
+.level.heavy{color:#c62828}
+.badge{display:inline-block;padding:4px 14px;border-radius:999px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
+.badge.dry{background:rgba(76,175,80,.12);color:#2e7d32}
+.badge.light{background:rgba(255,152,0,.12);color:#e65100}
+.badge.wet{background:rgba(25,118,210,.12);color:#1565c0}
+.badge.heavy{background:rgba(198,40,40,.12);color:#c62828}
+.dig{font-size:1rem;font-weight:600;padding:6px 14px;border-radius:999px;margin-bottom:16px;display:inline-flex;align-items:center;gap:6px}
+.dig.wet{background:rgba(25,118,210,.12);color:#1565c0}
+.dig.dry{background:rgba(76,175,80,.12);color:#2e7d32}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.meta-item{background:#f9fbff;border-radius:10px;padding:12px;border:1px solid #e6edf7}
+.meta-label{font-size:.75rem;color:#7a8ba3;text-transform:uppercase;letter-spacing:.04em}
+.meta-value{font-size:1rem;font-weight:600;margin-top:4px;color:#2c3e50}
+.footer{margin-top:20px;color:#8fa0b8;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -37,6 +40,7 @@ h1{font-size:1.5rem;margin-bottom:8px;color:#8ab4f8}
 <div id="status">
 <div class="badge" id="badge">—</div>
 <div class="level" id="level">—</div>
+<div class="dig" id="digital">—</div>
 </div>
 <div class="meta">
 <div class="meta-item"><div class="meta-label">Device</div><div class="meta-value" id="dev-id">—</div></div>
@@ -56,12 +60,15 @@ let el=document.getElementById('level');
 el.textContent=lvl+'%';
 el.className='level';
 let badge=document.getElementById('badge');
-if(lvl>=90){el.classList.add('dry');badge.textContent='SECO';badge.className='badge dry';}
-else if(lvl>=60){el.classList.add('light');badge.textContent='CHUVISCO';badge.className='badge light';}
-else if(lvl>=30){el.classList.add('wet');badge.textContent='CHUVENDO';badge.className='badge wet';}
+if(lvl<=10){el.classList.add('dry');badge.textContent='SECO';badge.className='badge dry';}
+else if(lvl<=40){el.classList.add('light');badge.textContent='CHUVISCO';badge.className='badge light';}
+else if(lvl<=70){el.classList.add('wet');badge.textContent='CHUVENDO';badge.className='badge wet';}
 else{badge.textContent='CHUVA FORTE';badge.className='badge heavy';el.classList.add('heavy');}
-document.getElementById('dev-id').textContent=d.device_id||'—';
-document.getElementById('bridge-status').textContent=d.bridge_connected?'conectado':'desconectado';
+ let dig=document.getElementById('digital');
+ if(d.rain_digital){dig.innerHTML='\u2614 CHUVA';dig.className='dig wet';}
+ else{dig.innerHTML='\u2600\ufe0f SECO';dig.className='dig dry';}
+ document.getElementById('dev-id').textContent=d.device_id||'—';
+document.getElementById('bridge-status').innerHTML=d.bridge_connected?'<a href="http://'+d.bridge_ip+':'+d.bridge_port+'" target="_blank" style="color:#3498db;text-decoration:none">conectado</a>':'desconectado';
 document.getElementById('rssi').textContent=d.rssi+' dBm';
 let up=d.uptime_s||0;
 document.getElementById('uptime').textContent=Math.floor(up/3600)+'h'+Math.floor((up%3600)/60)+'m';

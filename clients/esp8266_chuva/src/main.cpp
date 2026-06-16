@@ -25,6 +25,7 @@ static unsigned long s_last_bridge_reconnect = 0;
 static bool s_bridge_connected = false;
 
 static int s_rain_level = 100;
+static int s_rain_digital = HIGH;
 static int s_battery = 100;
 static unsigned long s_start_time = 0;
 static unsigned long s_last_send_ms = 0;
@@ -172,6 +173,7 @@ static void send_state(bool force)
         JsonDocument doc;
         doc["id"] = s_device_id;
         doc["rain_level"] = s_rain_level;
+        doc["rain_digital"] = s_rain_digital == LOW;
         serializeJson(doc, body);
     }
 
@@ -389,8 +391,9 @@ static void maintain_wifi_connection(void)
 static void read_sensor(void)
 {
     int raw = analogRead(RAIN_ANALOG_PIN);
-    s_rain_level = map(raw, 0, 1024, 0, 100);
+    s_rain_level = map(raw, 0, 1024, 100, 0);
     s_rain_level = constrain(s_rain_level, 0, 100);
+    s_rain_digital = digitalRead(RAIN_DIGITAL_PIN);
 
     static int counter = 0;
     counter++;
@@ -404,6 +407,7 @@ static void read_sensor(void)
 static void init_hardware(void)
 {
     pinMode(RAIN_ANALOG_PIN, INPUT);
+    pinMode(RAIN_DIGITAL_PIN, INPUT);
 #ifdef LED_PIN
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);
@@ -430,10 +434,13 @@ static void handle_api_state(void)
     {
         JsonDocument doc;
         doc["rain_level"] = s_rain_level;
+        doc["rain_digital"] = s_rain_digital == LOW;
         doc["battery"] = s_battery;
         doc["device_id"] = s_device_id;
         doc["device_name"] = s_device_name;
         doc["bridge_connected"] = s_bridge_connected;
+        doc["bridge_ip"] = s_bridge_host;
+        doc["bridge_port"] = s_bridge_port;
         doc["ip"] = WiFi.localIP().toString();
         doc["rssi"] = WiFi.RSSI();
         doc["uptime_s"] = (millis() - s_start_time) / 1000;
@@ -459,6 +466,7 @@ static void handle_serial(void)
         Serial.printf("\n--- Leitura forcada ---\n");
         read_sensor();
         Serial.printf("  Chuva:    %d %%\n", s_rain_level);
+        Serial.printf("  Digital:  %s\n", s_rain_digital == LOW ? "chuva" : "seco");
         Serial.printf("  Bateria:  %d %%\n", s_battery);
         if (s_bridge_discovered && s_bridge_connected)
         {
@@ -506,6 +514,7 @@ static void handle_serial(void)
         Serial.printf("  Nome:        %s\n", s_device_name);
         Serial.printf("  Tipo:        %s\n", get_device_type_string());
         Serial.printf("  Chuva:       %d %%\n", s_rain_level);
+        Serial.printf("  Digital:     %s\n", s_rain_digital == LOW ? "chuva" : "seco");
         Serial.printf("  Bateria:     %d %%\n", s_battery);
         Serial.printf("  Bridge:      http://%s:%d (%s)\n", s_bridge_host, s_bridge_port,
                       s_bridge_connected ? "conectado" : "desconectado");

@@ -95,3 +95,4 @@ git clone --recursive -b v1.8.2 https://github.com/espressif/esp-rainmaker.git ~
 ### Clientes estáveis (não modificar)
 - `clients/esp8266_gas/` — estável, não aplicar alterações
 - `clients/esp8266_dht21/` — estável, não aplicar alterações
+- `clients/esp8266_chuva/` — estável, não aplicar alterações
