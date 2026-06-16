@@ -160,6 +160,7 @@ device_type_t device_type_from_string(const char *type_str)
     if (strcmp(type_str, "tanque") == 0) return DEVICE_TYPE_TANQUE;
     if (strcmp(type_str, "gas") == 0) return DEVICE_TYPE_GAS_SENSOR;
     if (strcmp(type_str, "rain") == 0) return DEVICE_TYPE_RAIN_SENSOR;
+    if (strcmp(type_str, "electricity") == 0) return DEVICE_TYPE_ELECTRICITY;
     return DEVICE_TYPE_UNKNOWN;
 }
 
@@ -176,6 +177,7 @@ const char *device_type_to_string(device_type_t type)
     case DEVICE_TYPE_TANQUE: return "tanque";
     case DEVICE_TYPE_GAS_SENSOR: return "gas";
     case DEVICE_TYPE_RAIN_SENSOR: return "rain";
+    case DEVICE_TYPE_ELECTRICITY: return "electricity";
     default: return "unknown";
     }
 }

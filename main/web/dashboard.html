@@ -85,8 +85,9 @@ if(r.ok)toast('Gateway reiniciando...');
 }
 
 async function load(){try{
-let r=await fetch('/api/gateway/info');
-let b=await r.json();
+let[infoR,devR]=await Promise.all([fetch('/api/gateway/info'),fetch('/api/devices')]);
+let b=await infoR.json();
+let d=await devR.json();
 let u=b.uptime_s|0;
 let uptime=''+(u>86400?Math.floor(u/86400)+'d ':'')+Math.floor((u%86400)/3600)+'h'+Math.floor((u%3600)/60)+'m'+u%60+'s';
 document.getElementById('bridge-info').innerHTML=
@@ -101,11 +102,6 @@ document.getElementById('sub').textContent='IP: '+b.ip;
 document.getElementById('metric-ip').textContent=b.ip;
 document.getElementById('metric-uptime').textContent=uptime;
 document.getElementById('metric-heap').textContent=(b.free_heap/1024).toFixed(0)+' KB';
-}catch(e){document.getElementById('bridge-info').innerHTML='<div class="row"><span class="label" style="color:#C62828">Erro de conexão</span></div>'}
-
-try{
-let r=await fetch('/api/devices');
-let d=await r.json();
 let devs=d.devices||[];
 let h='';
 let on=0;
@@ -119,6 +115,7 @@ else if('contact' in st)stHtml=st.contact?'ABERTO':'FECHADO';
 else if('occupancy' in st)stHtml=st.occupancy?'MOVIMENTO':'LIVRE';
 else if('gas_level' in st)stHtml=st.gas_level+'%'+(st.alarm?' <span style="color:#C62828">\u26A0 ALARME</span>':' <span style="color:#2E7D32">\u2713 Seguro</span>');
 else if('rain_level' in st){let r=st.rain_level;let cls=r<=10?'seco':r<=40?'chuviscando':r<=70?'chovendo':'forte';let icon=r<=10?'\u2600\ufe0f':r<=40?'\u26c5':'\u2614';let label=r<=10?'Seco':r<=40?'Chuviscando':r<=70?'Chovendo':'Chuva Forte';let digCls=st.rain_digital===true?'chuva':'seco';let digIcon=st.rain_digital===true?'\u2614':'\u2600\ufe0f';let digLabel=st.rain_digital===true?'Digital: Chuva':'Digital: Seco';stHtml=r+'% <span class="badge-rain '+cls+'">'+icon+' '+label+'</span>'+(st.rain_digital!==undefined?' <span class="badge-digital '+digCls+'">'+digIcon+' '+digLabel+'</span>':'');}
+else if('current_ma' in st){let m=st.current_ma;let cls=m<200?'low':m<1000?'med':'high';let label=m<200?'BAIXA':m<1000?'MEDIA':'ALTA';stHtml=m+' mA <span class="badge-rain '+cls+'">\u26a1 '+label+'</span>';}
 else stHtml='<span style="color:#7A8BA3">—</span>';
 let ipLink=dev.ip&&dev.ip!='0.0.0.0'?'<a href="http://'+dev.ip+'" target="_blank" style="color:#3498DB;text-decoration:none">'+dev.ip+'</a>':'—';
 let lastSeen='';
@@ -132,7 +129,7 @@ h+='<div class="device">'+
 }
 document.getElementById('devices').innerHTML=h||'<div class="empty">Nenhum dispositivo registrado</div>';
 document.getElementById('dev-count').textContent='('+on+'/'+devs.length+' online)';
-}catch(e){document.getElementById('devices').innerHTML='<div class="empty" style="color:#C62828">Erro ao carregar dispositivos</div>'}
+}catch(e){document.getElementById('bridge-info').innerHTML='<div class="row"><span class="label" style="color:#C62828">Erro de conexão</span></div>';document.getElementById('devices').innerHTML='<div class="empty" style="color:#C62828">Erro ao carregar dispositivos</div>'}
 }
 load();setInterval(load,10000);
 </script>

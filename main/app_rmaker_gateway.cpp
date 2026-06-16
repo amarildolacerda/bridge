@@ -8,11 +8,25 @@
 #include <esp_rmaker_standard_types.h>
 #include <esp_rmaker_standard_params.h>
 #include <esp_rmaker_standard_devices.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
 
 static const char *TAG = "rmaker_gateway";
 
 static esp_rmaker_node_t *s_node = NULL;
 static bool s_initialized = false;
+static QueueHandle_t s_update_queue = NULL;
+static TaskHandle_t s_update_task = NULL;
+
+#define UPDATE_QUEUE_DEPTH 32
+#define UPDATE_TASK_STACK_SIZE 4096
+
+typedef struct {
+    char *id;
+    char *key;
+    char *value;
+} rmaker_update_msg_t;
 
 static esp_err_t write_cb(const esp_rmaker_device_t *device, const esp_rmaker_param_t *param,
         const esp_rmaker_param_val_t val, void *priv_data, esp_rmaker_write_ctx_t *ctx)
@@ -51,12 +65,87 @@ static esp_err_t write_cb(const esp_rmaker_device_t *device, const esp_rmaker_pa
     return ESP_OK;
 }
 
+static void rmaker_update_task_func(void *arg)
+{
+    rmaker_update_msg_t msg;
+    while (1) {
+        if (xQueueReceive(s_update_queue, &msg, portMAX_DELAY) == pdTRUE) {
+            void *rmaker_dev = device_registry_get_rmaker_handle(msg.id);
+            if (!rmaker_dev) {
+                free(msg.id); free(msg.key); free(msg.value);
+                continue;
+            }
+            const char *param_name = NULL;
+            esp_rmaker_param_val_t param_val;
+            param_val.type = RMAKER_VAL_TYPE_INVALID;
+
+            if (strcmp(msg.key, "on") == 0) {
+                param_name = ESP_RMAKER_DEF_POWER_NAME;
+                param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
+            } else if (strcmp(msg.key, "level") == 0) {
+                param_name = ESP_RMAKER_DEF_BRIGHTNESS_NAME;
+                param_val = esp_rmaker_int(atoi(msg.value));
+            } else if (strcmp(msg.key, "temperature") == 0) {
+                param_name = ESP_RMAKER_DEF_TEMPERATURE_NAME;
+                param_val = esp_rmaker_float((float)atof(msg.value));
+            } else if (strcmp(msg.key, "humidity") == 0) {
+                param_name = "Humidity";
+                param_val = esp_rmaker_float((float)atof(msg.value));
+            } else if (strcmp(msg.key, "contact") == 0) {
+                param_name = "Contact";
+                param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
+            } else if (strcmp(msg.key, "occupancy") == 0) {
+                param_name = "Occupancy";
+                param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
+            } else if (strcmp(msg.key, "light_level") == 0) {
+                param_name = "Light";
+                param_val = esp_rmaker_int(atoi(msg.value));
+            } else if (strcmp(msg.key, "gas_level") == 0) {
+                param_name = "GasLevel";
+                param_val = esp_rmaker_int(atoi(msg.value));
+            } else if (strcmp(msg.key, "alarm") == 0) {
+                param_name = "GasAlarm";
+                param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
+            } else if (strcmp(msg.key, "rain_level") == 0) {
+                param_name = "RainLevel";
+                param_val = esp_rmaker_int(atoi(msg.value));
+            } else if (strcmp(msg.key, "current_ma") == 0) {
+                param_name = "Current";
+                param_val = esp_rmaker_int(atoi(msg.value));
+            } else {
+                ESP_LOGW(TAG, "Unknown key: %s", msg.key);
+                free(msg.id); free(msg.key); free(msg.value);
+                continue;
+            }
+
+            esp_rmaker_param_t *param = esp_rmaker_device_get_param_by_name(
+                    (const esp_rmaker_device_t *)rmaker_dev, param_name);
+            if (param) {
+                esp_err_t err = esp_rmaker_param_update_and_report(param, param_val);
+                if (err != ESP_OK) {
+                    ESP_LOGW(TAG, "Update %s/%s failed: %s", msg.id, msg.key, esp_err_to_name(err));
+                }
+            } else {
+                ESP_LOGW(TAG, "Param %s not found on %s", param_name, msg.id);
+            }
+            free(msg.id); free(msg.key); free(msg.value);
+        }
+    }
+}
+
 esp_err_t rmaker_gateway_init(void)
 {
     if (s_initialized) {
         ESP_LOGW(TAG, "Already initialized");
         return ESP_OK;
     }
+
+    s_update_queue = xQueueCreate(UPDATE_QUEUE_DEPTH, sizeof(rmaker_update_msg_t));
+    if (!s_update_queue) {
+        ESP_LOGE(TAG, "Failed to create update queue");
+        return ESP_FAIL;
+    }
+    xTaskCreate(rmaker_update_task_func, "rmaker_upd", UPDATE_TASK_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &s_update_task);
 
     esp_rmaker_config_t rainmaker_cfg = {
         .enable_time_sync = false,
@@ -206,6 +295,18 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type)
         break;
     }
 
+    case DEVICE_TYPE_ELECTRICITY: {
+        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
+        if (rmaker_dev) {
+            esp_rmaker_param_t *cur = esp_rmaker_param_create("Current", NULL, esp_rmaker_int(0), PROP_FLAG_READ);
+            if (cur) {
+                esp_rmaker_param_add_ui_type(cur, ESP_RMAKER_UI_SLIDER);
+                esp_rmaker_device_add_param(rmaker_dev, cur);
+            }
+        }
+        break;
+    }
+
     default:
         ESP_LOGE(TAG, "Unsupported device type: %d", type);
         free(priv_id);
@@ -268,62 +369,22 @@ esp_err_t rmaker_gateway_device_remove(const char *id)
 esp_err_t rmaker_gateway_device_update_state(const char *id, const char *key, const char *value)
 {
     if (!s_initialized || !id || !key || !value) return ESP_FAIL;
+    if (!s_update_queue) return ESP_FAIL;
 
-    void *rmaker_dev = device_registry_get_rmaker_handle(id);
-    if (!rmaker_dev) {
-        return ESP_ERR_NOT_FOUND;
+    rmaker_update_msg_t msg;
+    msg.id = strdup(id);
+    msg.key = strdup(key);
+    msg.value = strdup(value);
+    if (!msg.id || !msg.key || !msg.value) {
+        free(msg.id); free(msg.key); free(msg.value);
+        return ESP_ERR_NO_MEM;
     }
 
-    const char *param_name = NULL;
-    esp_rmaker_param_val_t param_val;
-    param_val.type = RMAKER_VAL_TYPE_INVALID;
-
-    if (strcmp(key, "on") == 0) {
-        param_name = ESP_RMAKER_DEF_POWER_NAME;
-        param_val = esp_rmaker_bool(strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
-    } else if (strcmp(key, "level") == 0) {
-        param_name = ESP_RMAKER_DEF_BRIGHTNESS_NAME;
-        param_val = esp_rmaker_int(atoi(value));
-    } else if (strcmp(key, "temperature") == 0) {
-        param_name = ESP_RMAKER_DEF_TEMPERATURE_NAME;
-        param_val = esp_rmaker_float((float)atof(value));
-    } else if (strcmp(key, "humidity") == 0) {
-        param_name = "Humidity";
-        param_val = esp_rmaker_float((float)atof(value));
-    } else if (strcmp(key, "contact") == 0) {
-        param_name = "Contact";
-        param_val = esp_rmaker_bool(strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
-    } else if (strcmp(key, "occupancy") == 0) {
-        param_name = "Occupancy";
-        param_val = esp_rmaker_bool(strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
-    } else if (strcmp(key, "light_level") == 0) {
-        param_name = "Light";
-        param_val = esp_rmaker_int(atoi(value));
-    } else if (strcmp(key, "gas_level") == 0) {
-        param_name = "GasLevel";
-        param_val = esp_rmaker_int(atoi(value));
-    } else if (strcmp(key, "alarm") == 0) {
-        param_name = "GasAlarm";
-        param_val = esp_rmaker_bool(strcmp(value, "true") == 0 || strcmp(value, "1") == 0);
-    } else if (strcmp(key, "rain_level") == 0) {
-        param_name = "RainLevel";
-        param_val = esp_rmaker_int(atoi(value));
-    } else {
-        ESP_LOGW(TAG, "Unknown state key: %s for device %s", key, id);
-        return ESP_ERR_NOT_SUPPORTED;
+    if (xQueueSend(s_update_queue, &msg, 0) != pdTRUE) {
+        ESP_LOGW(TAG, "Update queue full, dropping %s/%s", id, key);
+        free(msg.id); free(msg.key); free(msg.value);
+        return ESP_FAIL;
     }
 
-    esp_rmaker_param_t *param = esp_rmaker_device_get_param_by_name(
-            (const esp_rmaker_device_t *)rmaker_dev, param_name);
-    if (!param) {
-        ESP_LOGW(TAG, "Param %s not found on device %s", param_name, id);
-        return ESP_ERR_NOT_FOUND;
-    }
-
-    esp_err_t err = esp_rmaker_param_update_and_report(param, param_val);
-    if (err != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to update param %s for device %s: %s",
-                param_name, id, esp_err_to_name(err));
-    }
-    return err;
+    return ESP_OK;
 }

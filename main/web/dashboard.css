@@ -188,6 +188,9 @@ h1 {
 .badge-rain.chuviscando { background: rgba(255,152,0,0.12); color: #e65100; }
 .badge-rain.chovendo { background: rgba(25,118,210,0.12); color: #1565c0; }
 .badge-rain.forte { background: rgba(198,40,40,0.12); color: var(--danger); }
+.badge-rain.low { background: rgba(46,125,50,0.12); color: var(--success); }
+.badge-rain.med { background: rgba(255,152,0,0.12); color: #e65100; }
+.badge-rain.high { background: rgba(198,40,40,0.12); color: var(--danger); }
 
 .badge-digital {
   display: inline-flex;

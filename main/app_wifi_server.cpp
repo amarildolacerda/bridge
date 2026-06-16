@@ -1169,7 +1169,7 @@ esp_err_t wifi_server_start(void)
     config.lru_purge_enable = true;
     config.uri_match_fn = httpd_uri_match_wildcard;
     config.max_uri_handlers = 20;
-    config.max_open_sockets = 10;
+    config.max_open_sockets = 20;
     config.keep_alive_enable = false;
 
     esp_err_t err = httpd_start(&s_server, &config);
