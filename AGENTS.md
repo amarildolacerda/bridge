@@ -6,6 +6,7 @@
 - a atualizao do "dev" para "main" so pode ser feito se solicitado ou pegar autorização
 - `main-v0.0.3` — backup do main anterior (antes do reset para dev)
 - antes de passar o dev para main gerar um branch do main_vx.x.x
+- quando gerar uma nova tag (ex: v0.0.7) tornar a versão a mesma da tag (target_compile_definitions(${COMPONENT_LIB} PRIVATE FW_VERSION="v0.0.7"))
 
 ## Ambiente
 
@@ -53,6 +54,7 @@ git clone --recursive -b v1.8.2 https://github.com/espressif/esp-rainmaker.git ~
 - `r` — restart
 - `h` / `?` — ajuda
 - Usa `getchar()` single-key, prompt `bridge>` só aparece após comando executado
+- para descobrir o ip do Bridge rodar discover_bridge.py
 
 ## Provisionamento WiFi
 - Bridge usa **BLE** (não SoftAP): quando não há credenciais STA salvas, inicia BLE advertising `PROV_<nome>`

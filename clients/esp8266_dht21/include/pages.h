@@ -9,13 +9,13 @@ static const char PAGE_DASHBOARD[] PROGMEM = R"rawliteral(
 <title>ESP8266 Sensor</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#F4F7FC;color:#2C3E50;display:flex;justify-content:center;align-items:center;min-height:100vh}
-.card{background:#FFFFFF;border-radius:12px;padding:24px;text-align:center;max-width:360px;width:90%}
-h1{font-size:1.3rem;color:#B2CEfE;margin-bottom:4px}
-.ip-badge{background:#E8EDF5;color:#4A6A8F;font-size:.75rem;padding:3px 10px;border-radius:12px;display:inline-block;margin-bottom:12px;font-family:monospace}
-.valor-sensor{font-size:2.5rem;margin:.25rem 0;color:#B2CEfE}
-.label{color:#7A8BA3;font-size:.85rem;margin-bottom:4px}
-.info{color:#8FA0B8;font-size:.8rem;margin-top:16px;word-break:break-all}
+body{font-family:system-ui,-apple-system,sans-serif;background:#010102;color:#f7f8f8;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#0f1011;border-radius:12px;padding:24px;text-align:center;max-width:360px;width:90%;border:1px solid #23252a}
+h1{font-size:1.3rem;color:#5e6ad2;margin-bottom:4px}
+.ip-badge{background:#141516;color:#8a8f98;font-size:.75rem;padding:3px 10px;border-radius:12px;display:inline-block;margin-bottom:12px;font-family:monospace}
+.valor-sensor{font-size:2.5rem;margin:.25rem 0;color:#f7f8f8}
+.label{color:#8a8f98;font-size:.85rem;margin-bottom:4px}
+.info{color:#62666d;font-size:.8rem;margin-top:16px;word-break:break-all}
 </style>
 </head>
 <body>

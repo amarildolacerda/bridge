@@ -2,3 +2,5 @@
 /build
 /managed_components
 .git_token
+__pycache__/
+*.pyc

@@ -9,20 +9,20 @@ static const char PAGE_DASHBOARD[] PROGMEM = R"rawliteral(
 <title>Detector de Gas</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#F4F7FC;color:#2C3E50;display:flex;justify-content:center;align-items:center;min-height:100vh}
-.card{background:#FFFFFF;border-radius:12px;padding:24px;text-align:center;max-width:360px;width:90%}
-h1{font-size:1.3rem;color:#B2CEfE;margin-bottom:4px}
-.ip-badge{background:#E8EDF5;color:#4A6A8F;font-size:.75rem;padding:3px 10px;border-radius:12px;display:inline-block;margin-bottom:12px;font-family:monospace}
+body{font-family:system-ui,-apple-system,sans-serif;background:#010102;color:#f7f8f8;display:flex;justify-content:center;align-items:center;min-height:100vh}
+.card{background:#0f1011;border-radius:12px;padding:24px;text-align:center;max-width:360px;width:90%;border:1px solid #23252a}
+h1{font-size:1.3rem;color:#5e6ad2;margin-bottom:4px}
+.ip-badge{background:#141516;color:#8a8f98;font-size:.75rem;padding:3px 10px;border-radius:12px;display:inline-block;margin-bottom:12px;font-family:monospace}
 .valor-gas{font-size:3rem;margin:.5rem 0;transition:color .3s}
-.valor-gas.safe{color:#2E7D32}
-.valor-gas.warn{color:#E65100}
-.valor-gas.alarm{color:#C62828}
-.label{color:#7A8BA3;font-size:.85rem;margin-bottom:4px}
+.valor-gas.safe{color:#27a644}
+.valor-gas.warn{color:#f5a623}
+.valor-gas.alarm{color:#e5484d}
+.label{color:#8a8f98;font-size:.85rem;margin-bottom:4px}
 .alarm-badge{display:inline-block;padding:6px 16px;border-radius:20px;font-size:.9rem;font-weight:700;margin-top:8px;transition:background .3s}
-.alarm-badge.safe{background:#E8F5E9;color:#2E7D32}
-.alarm-badge.alert{background:#FFF3E0;color:#E65100}
-.alarm-badge.danger{background:#FFEBEE;color:#C62828}
-.info{color:#8FA0B8;font-size:.8rem;margin-top:16px;word-break:break-all}
+.alarm-badge.safe{background:rgba(39,166,68,0.15);color:#27a644}
+.alarm-badge.alert{background:rgba(255,152,0,0.15);color:#f5a623}
+.alarm-badge.danger{background:rgba(229,72,77,0.15);color:#e5484d}
+.info{color:#62666d;font-size:.8rem;margin-top:16px;word-break:break-all}
 </style>
 </head>
 <body>

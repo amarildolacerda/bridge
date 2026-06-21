@@ -9,28 +9,28 @@ static const char PAGE_DASHBOARD[] PROGMEM = R"=====(
 <title>Sensor de Chuva</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f7fc;color:#2c3e50;min-height:100vh;display:flex;align-items:center;justify-content:center}
-.card{background:#fff;border-radius:12px;padding:24px;max-width:360px;width:90%;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.06)}
-h1{font-size:1.3rem;margin-bottom:4px;color:#b2cefe;font-weight:700}
-.sub{color:#7a8ba3;font-size:.85rem;margin-bottom:20px}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#010102;color:#f7f8f8;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#0f1011;border-radius:12px;padding:24px;max-width:360px;width:90%;text-align:center;border:1px solid #23252a}
+h1{font-size:1.3rem;margin-bottom:4px;color:#5e6ad2;font-weight:700}
+.sub{color:#8a8f98;font-size:.85rem;margin-bottom:20px}
 .level{font-size:4rem;font-weight:700;margin:12px 0}
-.level.dry{color:#4caf50}
-.level.light{color:#ff9800}
-.level.wet{color:#1976d2}
-.level.heavy{color:#c62828}
+.level.dry{color:#27a644}
+.level.light{color:#f5a623}
+.level.wet{color:#5e6ad2}
+.level.heavy{color:#e5484d}
 .badge{display:inline-block;padding:4px 14px;border-radius:999px;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px}
-.badge.dry{background:rgba(76,175,80,.12);color:#2e7d32}
-.badge.light{background:rgba(255,152,0,.12);color:#e65100}
-.badge.wet{background:rgba(25,118,210,.12);color:#1565c0}
-.badge.heavy{background:rgba(198,40,40,.12);color:#c62828}
+.badge.dry{background:rgba(39,166,68,0.15);color:#27a644}
+.badge.light{background:rgba(255,152,0,0.15);color:#f5a623}
+.badge.wet{background:rgba(94,106,210,0.2);color:#5e6ad2}
+.badge.heavy{background:rgba(229,72,77,0.15);color:#e5484d}
 .dig{font-size:1rem;font-weight:600;padding:6px 14px;border-radius:999px;margin-bottom:16px;display:inline-flex;align-items:center;gap:6px}
-.dig.wet{background:rgba(25,118,210,.12);color:#1565c0}
-.dig.dry{background:rgba(76,175,80,.12);color:#2e7d32}
+.dig.wet{background:rgba(94,106,210,0.2);color:#5e6ad2}
+.dig.dry{background:rgba(39,166,68,0.15);color:#27a644}
 .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
-.meta-item{background:#f9fbff;border-radius:10px;padding:12px;border:1px solid #e6edf7}
-.meta-label{font-size:.75rem;color:#7a8ba3;text-transform:uppercase;letter-spacing:.04em}
-.meta-value{font-size:1rem;font-weight:600;margin-top:4px;color:#2c3e50}
-.footer{margin-top:20px;color:#8fa0b8;font-size:.8rem}
+.meta-item{background:#141516;border-radius:10px;padding:12px;border:1px solid #23252a}
+.meta-label{font-size:.75rem;color:#8a8f98;text-transform:uppercase;letter-spacing:.04em}
+.meta-value{font-size:1rem;font-weight:600;margin-top:4px;color:#f7f8f8}
+.footer{margin-top:20px;color:#62666d;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -68,7 +68,7 @@ else{badge.textContent='CHUVA FORTE';badge.className='badge heavy';el.classList.
  if(d.rain_digital){dig.innerHTML='\u2614 CHUVA';dig.className='dig wet';}
  else{dig.innerHTML='\u2600\ufe0f SECO';dig.className='dig dry';}
  document.getElementById('dev-id').textContent=d.device_id||'—';
-document.getElementById('bridge-status').innerHTML=d.bridge_connected?'<a href="http://'+d.bridge_ip+':'+d.bridge_port+'" target="_blank" style="color:#3498db;text-decoration:none">conectado</a>':'desconectado';
+document.getElementById('bridge-status').innerHTML=d.bridge_connected?'<a href="http://'+d.bridge_ip+':'+d.bridge_port+'" target="_blank" style="color:#5e6ad2;text-decoration:none">conectado</a>':'desconectado';
 document.getElementById('rssi').textContent=d.rssi+' dBm';
 let up=d.uptime_s||0;
 document.getElementById('uptime').textContent=Math.floor(up/3600)+'h'+Math.floor((up%3600)/60)+'m';

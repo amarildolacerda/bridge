@@ -7,6 +7,7 @@
 #include <WiFiUdp.h>
 #include <sMQTTBroker.h>
 #include <ArduinoJson.h>
+#include <ArduinoOTA.h>
 #include "config.h"
 #include "dashboard.h"
 
@@ -671,6 +672,18 @@ void setup()
     s_broker.init(MQTT_PORT);
     Serial.printf("[%s] 🔌 MQTT broker on port %d\n", TAG, MQTT_PORT);
 
+    ArduinoOTA.setHostname(MDNS_HOSTNAME);
+    ArduinoOTA.onStart([]() { Serial.printf("[%s] OTA update start\n", TAG); });
+    ArduinoOTA.onEnd([]() { Serial.printf("[%s] OTA update end\n", TAG); });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("[%s] OTA progress: %u%%\r", TAG, (progress * 100) / total);
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("[%s] OTA error: %d\n", TAG, error);
+    });
+    ArduinoOTA.begin();
+    Serial.printf("[%s] OTA ready: %s.local\n", TAG, MDNS_HOSTNAME);
+
     s_http.on("/", handle_root);
     s_http.on("/api/devices", handle_api_devices);
     s_http.on("/api/info", handle_api_info);
@@ -718,6 +731,7 @@ void setup()
 
 void loop()
 {
+    ArduinoOTA.handle();
     s_broker.update();
     s_http.handleClient();
     check_timeouts();
@@ -740,13 +754,14 @@ void loop()
     if (millis() - last_status_log > 30000)
     {
         last_status_log = millis();
-        Serial.printf("[%s] 📊 Status: STA=%s, AP=%s, IP=%s, Devices=%d, FreeHeap=%d\n",
+        Serial.printf("[%s] 📊 Status: STA=%s, AP=%s, IP=%s, Devices=%d, FreeHeap=%d, OTA=%s.local\n",
                       TAG,
                       WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected",
                       s_ap_active ? "Active" : "Inactive",
                       WiFi.localIP().toString().c_str(),
                       s_device_count,
-                      ESP.getFreeHeap());
+                      ESP.getFreeHeap(),
+                      MDNS_HOSTNAME);
 
         if (s_device_count > 0)
         {

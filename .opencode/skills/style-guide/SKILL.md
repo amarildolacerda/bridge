@@ -12,38 +12,42 @@ description: >-
 
 ```css
 :root {
-  --bg: #f4f7fc;           /* fundo da página */
-  --surface: #ffffff;       /* cartões */
-  --surface-2: #f9fbff;     /* device list item bg */
-  --text: #24324a;          /* texto principal */
-  --muted: #7a8ba3;         /* texto secundário */
-  --primary: #3498db;       /* azul destaque */
-  --primary-strong: #2d7dff;
-  --border: #e6edf7;
-  --shadow: 0 12px 30px rgba(31, 58, 88, 0.08);
-  --success: #2e7d32;       /* verde online/ligado */
-  --danger: #c62828;        /* vermelho offline/desligado */
+  --bg: #010102;           /* canvas fundo da página */
+  --surface: #0f1011;      /* surface-1: cartões */
+  --surface-2: #141516;    /* surface-2: device list item bg */
+  --text: #f7f8f8;         /* ink: texto principal */
+  --muted: #d0d6e0;        /* ink-muted: texto secundário */
+  --muted-subtle: #8a8f98; /* ink-subtle: labels, meta */
+  --primary: #5e6ad2;      /* lavender-blue destaque */
+  --primary-strong: #828fff;
+  --primary-focus: #5e69d1;
+  --border: #23252a;       /* hairline */
+  --border-strong: #34343a;
+  --success: #27a644;      /* verde online/ligado */
+  --danger: #e5484d;       /* vermelho offline/desligado */
 }
 ```
+
+> Linear-style dark theme. Sem sombras — hierarquia via surface ladder + hairline borders.
 
 ## Componentes
 
 ### Cartão (`.card`)
-- bg `var(--surface)`, border `var(--border) 1px`, border-radius `18px`, shadow `var(--shadow)`
+- bg `var(--surface)`, border `1px solid var(--border)`, border-radius `12px`
 - padding `16px`
-- Título `<h2>` cor `var(--primary)`, tamanho `0.95rem`
+- Título `<h2>` cor `var(--primary)`, tamanho `0.95rem`, weight `600`
 
 ### Hero
 - Flex row, gap `16px`
 - `.hero-card`: flexível, padding `18px 20px`
-- `.eyebrow`: uppercase tracking, `0.72rem`, cor `var(--primary)`
-- `<h1>`: `1.5rem`
+- `.eyebrow`: `13px`, letter-spacing `0.4px`, uppercase, weight `500`, cor `var(--primary)`
+- `<h1>`: `1.5rem`, weight `600`, letter-spacing `-0.6px`
 
 ### Summary Grid (`.summary-grid`)
 - 3 colunas iguais, gap `12px`
-- `.metric`: surface + border + radius `18px`, padding `14px 16px`
-- `.metric-label`: uppercase `0.72rem`, cor `var(--muted)`
-- `.metric-value`: `1.02rem`, bold, cor `var(--text)`
+- `.metric`: surface + border + radius `12px`, padding `14px 16px`
+- `.metric-label`: `12px`, uppercase, letter-spacing `0.4px`, weight `500`, cor `var(--muted-subtle)`
+- `.metric-value`: `1.02rem`, weight `600`, cor `var(--text)`
 
 ### Content Grid (`.content`)
 - 2 colunas: `minmax(280px, 340px)` (sidebar) + `minmax(0, 1fr)` (main)
@@ -51,51 +55,49 @@ description: >-
 
 ### Row (`.row`)
 - Flex space-between, padding `10px 0`, border-bottom `1px solid var(--border)`
-- `.label`: cor `var(--muted)`
-- `.value`: bold, cor `var(--text)`
+- `.label`: cor `var(--muted-subtle)`
+- `.value`: weight `600`, cor `var(--text)`
 
 ### Badge (`.badge`)
-- Inline-flex, min-width `72px`, padding `4px 10px`, border-radius `999px`
-- `0.72rem`, bold, uppercase
-- `.badge.on`: bg green `rgba(46, 125, 50, 0.12)`, cor `var(--success)`
-- `.badge.off`: bg red `rgba(198, 40, 40, 0.12)`, cor `var(--danger)`
+- Inline-flex, min-width `72px`, padding `2px 8px`, border-radius `9999px`
+- `12px`, weight `500`
+- `.badge.on`: bg green `rgba(39, 166, 68, 0.15)`, cor `var(--success)`
+- `.badge.off`: bg red `rgba(229, 72, 77, 0.15)`, cor `var(--danger)`
 
 ### Device List Item (`.device`)
-- bg `var(--surface-2)`, border `var(--border) 1px`, border-radius `14px`
+- bg `var(--surface-2)`, border `1px solid var(--border)`, border-radius `12px`
 - padding `14px`
 - `.device-head`: flex row, gap `8px`, wrap
-- `.dev-name`: bold
-- `.dev-meta`: `0.76rem`, cor `var(--muted)`, margin `6px 0 8px`
+- `.dev-name`: weight `600`
+- `.dev-meta`: `0.76rem`, cor `var(--muted-subtle)`, margin `6px 0 8px`
 - `.dev-state`: `0.9rem`, cor `var(--muted)`
 
 ### LED Indicator (`.led`)
-- `9px` círculo, box-shadow `0 0 0 4px rgba(52, 152, 219, 0.08)`
+- `9px` círculo, box-shadow `0 0 0 4px rgba(94, 106, 210, 0.12)`
 - `.led.on`: bg `var(--success)`
-- `.led.off`: bg `#96a3b6`
+- `.led.off`: bg `#3e3e44`
 
 ### Botões
-- `.btn`: surface + border `1px solid var(--primary)`, radius `10px`, padding `10px 16px`
-- `0.85rem`, semibold, cor `var(--primary)`
+- `.btn`: surface + border `1px solid var(--primary)`, radius `8px`, padding `10px 16px`
+- `0.85rem`, weight `500`, cor `var(--primary)`
 - Hover: bg `var(--primary)`, cor `#fff`
 - `.btn-danger`: border/cor `var(--danger)`, hover bg `var(--danger)`
 - `.btn:disabled`: opacity `0.5`, cursor not-allowed
 
 ### Copy Button (`.cpy`)
 - bg `var(--primary)`, cor `#fff`, radius `6px`, padding `3px 10px`
-- `0.72rem`, bold, uppercase, cursor pointer
+- `12px`, weight `500`, uppercase, cursor pointer
 
 ### Empty State (`.empty`)
-- Text-align center, padding `36px 16px`, cor `var(--muted)`
+- Text-align center, padding `36px 16px`, cor `var(--muted-subtle)`
 
 ### Code (`.code`)
-- Monospace stack, `0.82rem`, bg `var(--surface-2)`, padding `3px 8px`, radius `6px`
+- Monospace stack (`JetBrains Mono`, `SF Mono`), `0.82rem`, bg `var(--surface-2)`, padding `3px 8px`, radius `6px`
 
 ## Background do Body
 ```css
 body {
-  background:
-    radial-gradient(circle at top left, rgba(52, 152, 219, 0.10), transparent 26%),
-    linear-gradient(180deg, #f8fbff 0%, #f4f7fc 100%);
+  background: var(--bg);  /* #010102 — flat, sem gradientes */
 }
 ```
 

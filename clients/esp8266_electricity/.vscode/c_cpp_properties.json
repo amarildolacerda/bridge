@@ -10,7 +10,6 @@
             "includePath": [
                 "/home/kzuca/project/bridge/clients/esp8266_electricity/include",
                 "/home/kzuca/project/bridge/clients/esp8266_electricity/src",
-                "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266HTTPClient/src",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/EEPROM",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ArduinoOTA",
                 "/home/kzuca/project/bridge/clients/esp8266_electricity/.pio/libdeps/esp8266/WiFiManager",
@@ -25,6 +24,7 @@
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/tools/sdk/lwip2/include",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/variants/esp8285",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266AVRISP/src",
+                "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266HTTPClient/src",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266HTTPUpdateServer/src",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266LLMNR",
                 "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266NetBIOS",
@@ -61,7 +61,6 @@
                 "path": [
                     "/home/kzuca/project/bridge/clients/esp8266_electricity/include",
                     "/home/kzuca/project/bridge/clients/esp8266_electricity/src",
-                    "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266HTTPClient/src",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/EEPROM",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ArduinoOTA",
                     "/home/kzuca/project/bridge/clients/esp8266_electricity/.pio/libdeps/esp8266/WiFiManager",
@@ -76,6 +75,7 @@
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/tools/sdk/lwip2/include",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/variants/esp8285",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266AVRISP/src",
+                    "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266HTTPClient/src",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266HTTPUpdateServer/src",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266LLMNR",
                     "/home/kzuca/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266NetBIOS",

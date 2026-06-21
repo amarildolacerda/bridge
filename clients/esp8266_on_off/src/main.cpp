@@ -6,6 +6,7 @@
 #include <WiFiManager.h>
 #include <WiFiUdp.h>
 #include <EEPROM.h>
+#include <ArduinoOTA.h>
 #include "config.h"
 #include "pages.h"
 
@@ -696,6 +697,15 @@ static void handle_serial(void)
         delay(500);
         ESP.restart();
         break;
+    case 'u':
+    case 'U':
+        Serial.printf("\n--- OTA ---\n");
+        Serial.printf("  Hostname: %s.local\n", s_device_id);
+        Serial.printf("  Port:     8266 (ArduinoOTA)\n");
+        Serial.printf("  PlatformIO CLI:\n");
+        Serial.printf("    pio run -t upload --upload-port %s.local\n", s_device_id);
+        Serial.printf("-------------\n\n");
+        break;
     case 'h':
     case 'H':
     case '?':
@@ -705,6 +715,7 @@ static void handle_serial(void)
         Serial.printf("  t    - toggle relay\n");
         Serial.printf("  s    - status do dispositivo\n");
         Serial.printf("  r    - restart\n");
+        Serial.printf("  u    - info OTA\n");
         Serial.printf("  h/?  - esta ajuda\n");
         Serial.printf("  Browser: http://%s\n", WiFi.localIP().toString().c_str());
         if (s_bridge_discovered)
@@ -748,6 +759,18 @@ void setup(void)
         ESP.restart();
     }
 
+    ArduinoOTA.setHostname(s_device_id);
+    ArduinoOTA.onStart([]() { Serial.printf("[%s] OTA update start\n", TAG); });
+    ArduinoOTA.onEnd([]() { Serial.printf("[%s] OTA update end\n", TAG); });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("[%s] OTA progress: %u%%\r", TAG, (progress * 100) / total);
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("[%s] OTA error: %d\n", TAG, error);
+    });
+    ArduinoOTA.begin();
+    Serial.printf("[%s] OTA ready: %s.local\n", TAG, s_device_id);
+
     s_server.on("/", handle_root);
     s_server.on("/api/state", handle_api_state);
     s_server.on("/api/on", HTTP_POST, handle_api_on);
@@ -775,6 +798,7 @@ void loop(void)
 {
     handle_serial();
     check_config_portal_timeout();
+    ArduinoOTA.handle();
     s_server.handleClient();
 
     if (WiFi.status() != WL_CONNECTED)

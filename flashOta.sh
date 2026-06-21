@@ -16,9 +16,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$HOST" ]; then
-    echo "Erro: especifique o host com -h"
-    echo "Ex:  $0 -h 192.168.1.105"
-    exit 1
+    echo "Discovering bridge IP..."
+    if ! HOST=$(python3 "$SCRIPT_DIR/discover_bridge.py" | grep -oP 'Bridge: \K[\d.]+' | head -1); then
+        echo "Erro: especifique o host com -h ou certifique-se que o bridge esta acessivel via UDP"
+        echo "Ex:  $0 -h 192.168.1.105"
+        exit 1
+    fi
+    if [ -z "$HOST" ]; then
+        echo "Erro: nenhum bridge encontrado na rede"
+        exit 1
+    fi
+    echo "Bridge encontrado em: $HOST"
 fi
 
 cd "$SCRIPT_DIR"

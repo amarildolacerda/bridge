@@ -92,7 +92,7 @@ static void rmaker_update_task_func(void *arg)
                 param_name = "Humidity";
                 param_val = esp_rmaker_float((float)atof(msg.value));
             } else if (strcmp(msg.key, "contact") == 0) {
-                param_name = "Contact";
+                param_name = ESP_RMAKER_DEF_POWER_NAME;
                 param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
             } else if (strcmp(msg.key, "occupancy") == 0) {
                 param_name = "Occupancy";
@@ -101,14 +101,17 @@ static void rmaker_update_task_func(void *arg)
                 param_name = "Light";
                 param_val = esp_rmaker_int(atoi(msg.value));
             } else if (strcmp(msg.key, "gas_level") == 0) {
-                param_name = "GasLevel";
-                param_val = esp_rmaker_int(atoi(msg.value));
+                param_name = ESP_RMAKER_DEF_POWER_NAME;
+                param_val = esp_rmaker_bool(atoi(msg.value) > 0);
             } else if (strcmp(msg.key, "alarm") == 0) {
-                param_name = "GasAlarm";
+                param_name = ESP_RMAKER_DEF_POWER_NAME;
+                param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
+            } else if (strcmp(msg.key, "rain_digital") == 0) {
+                param_name = ESP_RMAKER_DEF_POWER_NAME;
                 param_val = esp_rmaker_bool(strcmp(msg.value, "true") == 0 || strcmp(msg.value, "1") == 0);
             } else if (strcmp(msg.key, "rain_level") == 0) {
-                param_name = "RainLevel";
-                param_val = esp_rmaker_int(atoi(msg.value));
+                param_name = ESP_RMAKER_DEF_POWER_NAME;
+                param_val = esp_rmaker_bool(atoi(msg.value) > 0);
             } else if (strcmp(msg.key, "current_ma") == 0) {
                 param_name = "Current";
                 param_val = esp_rmaker_int(atoi(msg.value));
@@ -218,17 +221,9 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type)
         break;
     }
 
-    case DEVICE_TYPE_CONTACT_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
-        if (rmaker_dev) {
-            esp_rmaker_param_t *contact = esp_rmaker_param_create("Contact", NULL, esp_rmaker_bool(false), PROP_FLAG_READ);
-            if (contact) {
-                esp_rmaker_param_add_ui_type(contact, ESP_RMAKER_UI_TOGGLE);
-                esp_rmaker_device_add_param(rmaker_dev, contact);
-            }
-        }
+    case DEVICE_TYPE_CONTACT_SENSOR:
+        rmaker_dev = esp_rmaker_switch_device_create(rmaker_name, priv_id, false);
         break;
-    }
 
     case DEVICE_TYPE_OCCUPANCY_SENSOR: {
         rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
@@ -266,34 +261,13 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type)
         break;
     }
 
-    case DEVICE_TYPE_GAS_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
-        if (rmaker_dev) {
-            esp_rmaker_param_t *gas = esp_rmaker_param_create("GasLevel", NULL, esp_rmaker_int(0), PROP_FLAG_READ);
-            if (gas) {
-                esp_rmaker_param_add_ui_type(gas, ESP_RMAKER_UI_SLIDER);
-                esp_rmaker_device_add_param(rmaker_dev, gas);
-            }
-            esp_rmaker_param_t *alarm = esp_rmaker_param_create("GasAlarm", NULL, esp_rmaker_bool(false), PROP_FLAG_READ);
-            if (alarm) {
-                esp_rmaker_param_add_ui_type(alarm, ESP_RMAKER_UI_TOGGLE);
-                esp_rmaker_device_add_param(rmaker_dev, alarm);
-            }
-        }
+    case DEVICE_TYPE_GAS_SENSOR:
+        rmaker_dev = esp_rmaker_switch_device_create(rmaker_name, priv_id, false);
         break;
-    }
 
-    case DEVICE_TYPE_RAIN_SENSOR: {
-        rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
-        if (rmaker_dev) {
-            esp_rmaker_param_t *rain = esp_rmaker_param_create("RainLevel", NULL, esp_rmaker_int(100), PROP_FLAG_READ);
-            if (rain) {
-                esp_rmaker_param_add_ui_type(rain, ESP_RMAKER_UI_SLIDER);
-                esp_rmaker_device_add_param(rmaker_dev, rain);
-            }
-        }
+    case DEVICE_TYPE_RAIN_SENSOR:
+        rmaker_dev = esp_rmaker_switch_device_create(rmaker_name, priv_id, false);
         break;
-    }
 
     case DEVICE_TYPE_ELECTRICITY: {
         rmaker_dev = esp_rmaker_device_create(rmaker_name, ESP_RMAKER_DEVICE_OTHER, priv_id);
@@ -319,7 +293,8 @@ esp_err_t rmaker_gateway_device_add(const char *id, device_type_t type)
         return ESP_FAIL;
     }
 
-    if (type == DEVICE_TYPE_ON_OFF || type == DEVICE_TYPE_DIMMABLE) {
+    if (type == DEVICE_TYPE_ON_OFF || type == DEVICE_TYPE_DIMMABLE
+            || type == DEVICE_TYPE_GAS_SENSOR || type == DEVICE_TYPE_RAIN_SENSOR || type == DEVICE_TYPE_CONTACT_SENSOR) {
         esp_rmaker_device_add_cb(rmaker_dev, write_cb, NULL);
     }
 

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "esp8266_660351",
+    "name": "Temperatura Sala",
+    "type": "temperature",
+    "ip": "192.168.1.118",
+    "registered": true,
+    "online": true,
+    "last_seen": 1782053874.7192583,
+    "state": {
+      "temperature": 21.6,
+      "humidity": 12.4
+    },
+    "commands": []
+  },
+  {
+    "id": "esp8266_a82144",
+    "name": "Detector Gas",
+    "type": "gas",
+    "ip": "192.168.1.101",
+    "registered": true,
+    "online": true,
+    "last_seen": 1782053874.1683385,
+    "state": {
+      "gas_level": 12,
+      "alarm": true
+    },
+    "commands": []
+  }
+]

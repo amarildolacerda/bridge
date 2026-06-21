@@ -427,21 +427,23 @@ esp_err_t device_registry_remove_device(const char *id)
     return ESP_OK;
 }
 
-const char *device_registry_get_state_json(const char *id)
+esp_err_t device_registry_get_state_json(const char *id, char *buf, size_t buf_size)
 {
-    if (!s_registry_mutex) return "{}";
+    if (!buf || buf_size == 0) return ESP_ERR_INVALID_ARG;
+    buf[0] = '\0';
+    if (!s_registry_mutex) return ESP_FAIL;
     xSemaphoreTake(s_registry_mutex, portMAX_DELAY);
     int idx = find_device_by_id(id);
     if (idx < 0) {
         xSemaphoreGive(s_registry_mutex);
-        return "{}";
+        return ESP_ERR_NOT_FOUND;
     }
 
-    static char json_buf[MAX_DEVICE_STATE_LEN + 16];
     const char *state = s_devices[idx].state_json;
     if (strlen(state) == 0) {
         xSemaphoreGive(s_registry_mutex);
-        return "{}";
+        snprintf(buf, buf_size, "{}");
+        return ESP_OK;
     }
 
     char tmp[MAX_DEVICE_STATE_LEN];
@@ -449,10 +451,11 @@ const char *device_registry_get_state_json(const char *id)
     tmp[sizeof(tmp) - 1] = '\0';
     xSemaphoreGive(s_registry_mutex);
 
-    json_buf[0] = '{';
-    int pos = 1;
-    char *token = strtok(tmp, "|");
-    while (token && pos < (int)sizeof(json_buf) - 4) {
+    char *saveptr = NULL;
+    int pos = 0;
+    pos += snprintf(buf + pos, buf_size - pos, "{");
+    char *token = strtok_r(tmp, "|", &saveptr);
+    while (token && pos < (int)buf_size - 4) {
         char *eq = strchr(token, '=');
         if (eq) {
             *eq = '\0';
@@ -463,25 +466,25 @@ const char *device_registry_get_state_json(const char *id)
             for (const char *p = v; *p; p++) {
                 if (*p != '.' && *p != '-' && (*p < '0' || *p > '9')) { is_num = false; break; }
             }
-            if (pos > 1) json_buf[pos++] = ',';
+            if (pos > 1) buf[pos++] = ',';
             if (is_bool || is_num) {
-                pos += snprintf(json_buf + pos, sizeof(json_buf) - pos, "\"%s\":%s", k, v);
+                pos += snprintf(buf + pos, buf_size - pos, "\"%s\":%s", k, v);
             } else {
-                pos += snprintf(json_buf + pos, sizeof(json_buf) - pos, "\"%s\":\"%s\"", k, v);
+                pos += snprintf(buf + pos, buf_size - pos, "\"%s\":\"%s\"", k, v);
             }
         }
-        token = strtok(NULL, "|");
+        token = strtok_r(NULL, "|", &saveptr);
     }
 
-    if (pos < (int)sizeof(json_buf)) {
-        json_buf[pos] = '}';
-        json_buf[pos + 1] = '\0';
+    if (pos < (int)buf_size) {
+        buf[pos] = '}';
+        buf[pos + 1] = '\0';
     } else {
-        json_buf[sizeof(json_buf) - 2] = '}';
-        json_buf[sizeof(json_buf) - 1] = '\0';
+        buf[buf_size - 2] = '}';
+        buf[buf_size - 1] = '\0';
     }
 
-    return json_buf;
+    return ESP_OK;
 }
 
 void device_registry_mark_seen(const char *id)

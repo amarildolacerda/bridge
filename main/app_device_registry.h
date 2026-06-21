@@ -60,7 +60,7 @@ int device_registry_register(const char *id, device_type_t type, const char *nam
 bridged_device_t *device_registry_get_by_id(const char *id);
 bridged_device_t *device_registry_get_all(int *count);
 esp_err_t device_registry_update_state(const char *id, const char *key, const char *value);
-const char *device_registry_get_state_json(const char *id);
+esp_err_t device_registry_get_state_json(const char *id, char *buf, size_t buf_size);
 esp_err_t device_registry_add_command(const char *id, const char *cluster, const char *command, const char *data);
 int device_registry_get_commands(const char *id, pending_command_t *commands, int max_commands);
 esp_err_t device_registry_remove_device(const char *id);

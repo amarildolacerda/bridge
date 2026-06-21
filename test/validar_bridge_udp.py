@@ -54,7 +54,7 @@ def listen_broadcast(stop_event, results):
 
 def send_discovery(sock):
     """Envia discovery request via broadcast"""
-    payload = json.dumps({"service": "esp-matter-bridge", "discover": True})
+    payload = json.dumps({"service": "esp-bridge", "discover": True})
     sock.sendto(payload.encode(), ('255.255.255.255', DISCOVERY_PORT))
     print(f"  -> Discovery sent to 255.255.255.255:{DISCOVERY_PORT}")
 

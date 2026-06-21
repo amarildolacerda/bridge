@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP-RainMaker Gateway</title>
+<link rel="stylesheet" href="/dashboard.css">
+</head>
+<body>
+<div class="page">
+<section class="hero">
+<div class="hero-card">
+<div class="hero-top">
+<div>
+<p class="eyebrow">ESP-HA Gateway</p>
+<h1>Dashboard</h1>
+</div>
+<div class="admin-wrap" id="adminWrap">
+<button class="admin-btn" id="adminBtn" onclick="toggleAdmin()" title="Admin">&#9881;</button>
+<div class="admin-dropdown" id="adminMenu">
+<div class="dropdown-item" onclick="doBroadcast()">&#128260; Buscar dispositivos</div>
+<div class="dropdown-item danger" onclick="doReset()">&#8635; Reiniciar Gateway</div>
+</div>
+</div>
+</div>
+<div class="sub" id="sub">carregando...</div>
+</div>
+
+</section>
+
+<section class="content">
+    <div class="card">
+        <h2>Status do Gateway</h2>
+        <div id="bridge-info"><div class="row"><span class="label">IP</span><span class="value">—</span></div></div>
+    </div>
+    <div class="card">
+        <h2>Dispositivos <span id="dev-count" style="color:var(--muted-subtle);font-weight:400"></span></h2>
+        <div id="devices"><div class="empty">carregando...</div></div>
+    </div>
+</section>
+</div>
+<div id="toast"></div>
+<script>
+function toggleAdmin(){
+var m=document.getElementById('adminMenu');
+m.style.display=m.style.display==='block'?'none':'block';
+}
+document.addEventListener('click',function(e){
+var w=document.getElementById('adminWrap');
+if(w&&!w.contains(e.target))document.getElementById('adminMenu').style.display='none';
+});
+
+function toast(msg,isErr){
+var t=document.getElementById('toast');
+t.textContent=msg;
+t.className='toast '+(isErr?'err':'ok');
+t.style.display='block';
+setTimeout(function(){t.style.display='none';},3000);
+}
+
+function doBroadcast(){
+document.getElementById('adminMenu').style.display='none';
+toast('Buscando dispositivos...');
+fetch('/api/gateway/broadcast',{method:'POST'}).then(function(r){
+if(r.ok)toast('Pedido de registro enviado!');
+else toast('Erro ao buscar dispositivos',true);
+}).catch(function(){toast('Erro de conexao',true);});
+}
+
+function doReset(){
+document.getElementById('adminMenu').style.display='none';
+if(!confirm('Reiniciar o gateway?'))return;
+toast('Reiniciando...');
+fetch('/api/gateway/reset',{method:'POST'}).then(function(r){
+if(r.ok)toast('Gateway reiniciando...');
+}).catch(function(){});
+}
+
+async function load(){try{
+let[infoR,devR]=await Promise.all([fetch('/api/gateway/info'),fetch('/api/devices')]);
+let b=await infoR.json();
+let d=await devR.json();
+let u=b.uptime_s|0;
+let uptime=''+(u>86400?Math.floor(u/86400)+'d ':'')+Math.floor((u%86400)/3600)+'h'+Math.floor((u%3600)/60)+'m'+u%60+'s';
+ document.getElementById('bridge-info').innerHTML=
+ '<div class="row"><span class="label">IP</span><span class="value">'+b.ip+'</span></div>'+
+ '<div class="row"><span class="label">Versão</span><span class="value">'+(b.version||'—')+'</span></div>'+
+ '<div class="row"><span class="label">Uptime</span><span class="value">'+uptime+'</span></div>';
+document.getElementById('sub').textContent=b.hostname||'bridge';
+
+let devs=Array.isArray(d)?d:[];
+let h='';
+let on=0;
+for(let dev of devs){
+if(dev.online)on++;
+let st=dev.state||{};
+let stHtml='';
+if('on' in st)stHtml='<span class="'+(st.on?'state-on':'state-off')+'">'+(st.on?'LIGADO':'DESLIGADO')+'</span>';
+else if('temperature' in st)stHtml=st.temperature.toFixed(1)+'\u00B0C '+(st.humidity!=null?st.humidity.toFixed(0)+'%':'');
+else if('contact' in st)stHtml=st.contact?'ABERTO':'FECHADO';
+else if('occupancy' in st)stHtml=st.occupancy?'MOVIMENTO':'LIVRE';
+else if('gas_level' in st)stHtml=st.gas_level+'%'+(st.alarm?' <span style="color:var(--danger)">\u26A0 ALARME</span>':' <span style="color:var(--success)">\u2713 Seguro</span>');
+else if('rain_level' in st){let r=st.rain_level;let cls=r<=10?'seco':r<=40?'chuviscando':r<=70?'chovendo':'forte';let icon=r<=10?'\u2600\ufe0f':r<=40?'\u26c5':'\u2614';let label=r<=10?'Seco':r<=40?'Chuviscando':r<=70?'Chovendo':'Chuva Forte';let digCls=st.rain_digital===true?'chuva':'seco';let digIcon=st.rain_digital===true?'\u2614':'\u2600\ufe0f';let digLabel=st.rain_digital===true?'Digital: Chuva':'Digital: Seco';stHtml=r+'% <span class="badge-rain '+cls+'">'+icon+' '+label+'</span>'+(st.rain_digital!==undefined?' <span class="badge-digital '+digCls+'">'+digIcon+' '+digLabel+'</span>':'');}
+else if('current_ma' in st){let m=st.current_ma;let cls=m<200?'low':m<1000?'med':'high';let label=m<200?'BAIXA':m<1000?'MEDIA':'ALTA';stHtml=m+' mA <span class="badge-rain '+cls+'">\u26a1 '+label+'</span>';}
+else stHtml='<span style="color:var(--muted-subtle)">—</span>';
+let ipLink=dev.ip&&dev.ip!='0.0.0.0'?'<a href="http://'+dev.ip+'" target="_blank" style="color:var(--primary);text-decoration:none">'+dev.ip+'</a>':'—';
+let lastSeen='';
+if(dev.last_seen_elapsed_s!=null){let s=dev.last_seen_elapsed_s;
+lastSeen=s<60?s+'s':s<3600?Math.floor(s/60)+'m':s<86400?Math.floor(s/3600)+'h '+Math.floor((s%3600)/60)+'m':Math.floor(s/86400)+'d '+Math.floor((s%86400)/3600)+'h';
+lastSeen='<div class="dev-ts">\u00FAtima coleta: '+lastSeen+'</div>';}
+h+='<div class="device">'+
+'<div class="device-head"><span class="led '+(dev.online?'on':'off')+'"></span><span class="dev-name">'+dev.name+'</span> <span class="badge '+(dev.online?'on':'off')+'">'+(dev.online?'online':'offline')+'</span></div>'+
+'<div class="dev-meta">'+dev.type+' &middot; '+ipLink+'</div>'+
+'<div class="dev-state">'+stHtml+'</div>'+lastSeen+'</div>';
+}
+document.getElementById('devices').innerHTML=h||'<div class="empty">Nenhum dispositivo registrado</div>';
+document.getElementById('dev-count').textContent='('+on+'/'+devs.length+' online)';
+}catch(e){document.getElementById('bridge-info').innerHTML='<div class="row"><span class="label" style="color:var(--danger)">Erro de conexão</span></div>';document.getElementById('devices').innerHTML='<div class="empty" style="color:var(--danger)">Erro ao carregar dispositivos</div>'}
+}
+load();setInterval(load,10000);
+</script>
+</body>
+</html>

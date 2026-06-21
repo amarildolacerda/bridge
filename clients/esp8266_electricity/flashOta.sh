@@ -18,10 +18,18 @@ echo "Building..."
 pio run
 
 if [ -z "$HOST" ]; then
-    echo "Hostname nao especificado."
-    echo "Use: $0 -h <hostname>"
-    echo "Ex:  $0 -h esp8266_87c43e.local"
-    exit 1
+    echo "Discovering bridge IP..."
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    if ! HOST=$(python3 "$SCRIPT_DIR/../../discover_bridge.py" | grep -oP 'Bridge: \K[\d.]+' | head -1); then
+        echo "Erro: especifique o host com -h ou certifique-se que o bridge esta acessivel via UDP"
+        echo "Ex:  $0 -h esp8266_87c43e.local"
+        exit 1
+    fi
+    if [ -z "$HOST" ]; then
+        echo "Erro: nenhum bridge encontrado na rede"
+        exit 1
+    fi
+    echo "Bridge encontrado em: $HOST"
 fi
 
 echo "Uploading OTA to $HOST ..."

@@ -581,7 +581,7 @@ static esp_err_t device_state_handler(httpd_req_t *req)
     cJSON *child = NULL;
     cJSON_ArrayForEach(child, root)
     {
-        if (strcmp(child->string, "id") == 0)
+        if (!child->string || strcmp(child->string, "id") == 0)
             continue;
 
         const char *key = child->string;
@@ -630,7 +630,8 @@ static esp_err_t device_commands_handler(httpd_req_t *req)
 
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
     {
-        char *param = strtok(query, "&");
+        char *saveptr;
+        char *param = strtok_r(query, "&", &saveptr);
         while (param)
         {
             if (strncmp(param, "id=", 3) == 0)
@@ -639,7 +640,7 @@ static esp_err_t device_commands_handler(httpd_req_t *req)
                 found = true;
                 break;
             }
-            param = strtok(NULL, "&");
+            param = strtok_r(NULL, "&", &saveptr);
         }
     }
 
@@ -720,7 +721,8 @@ static esp_err_t device_info_handler(httpd_req_t *req)
 
     if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK)
     {
-        char *param = strtok(query, "&");
+        char *saveptr;
+        char *param = strtok_r(query, "&", &saveptr);
         while (param)
         {
             if (strncmp(param, "id=", 3) == 0)
@@ -729,7 +731,7 @@ static esp_err_t device_info_handler(httpd_req_t *req)
                 found = true;
                 break;
             }
-            param = strtok(NULL, "&");
+            param = strtok_r(NULL, "&", &saveptr);
         }
     }
 
@@ -870,10 +872,11 @@ static void ws_push_device_update(const char *id)
     cJSON_AddStringToObject(resp, "name", dev->name);
     cJSON_AddStringToObject(resp, "type", device_type_to_string(dev->type));
     cJSON_AddBoolToObject(resp, "online", dev->online);
-    const char *state_json = device_registry_get_state_json(dev->id);
-    if (strcmp(state_json, "{}") != 0)
+    char state_buf[128];
+    if (device_registry_get_state_json(dev->id, state_buf, sizeof(state_buf)) == ESP_OK
+        && strcmp(state_buf, "{}") != 0)
     {
-        cJSON *state = cJSON_Parse(state_json);
+        cJSON *state = cJSON_Parse(state_buf);
         if (state)
             cJSON_AddItemToObject(resp, "state", state);
     }
@@ -954,6 +957,7 @@ static esp_err_t gateway_info_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "application/json");
     cJSON *resp = cJSON_CreateObject();
     cJSON_AddStringToObject(resp, "ip", s_bridge_ip);
+    cJSON_AddStringToObject(resp, "version", FW_VERSION);
     cJSON_AddNumberToObject(resp, "uptime_s", esp_timer_get_time() / 1000000);
     cJSON_AddNumberToObject(resp, "free_heap", esp_get_free_heap_size());
     cJSON_AddNumberToObject(resp, "min_free_heap", esp_get_minimum_free_heap_size());
@@ -1004,10 +1008,11 @@ static esp_err_t devices_list_handler(httpd_req_t *req)
             int64_t elapsed_s = (esp_timer_get_time() - devices[i].last_seen_us) / 1000000;
             cJSON_AddNumberToObject(item, "last_seen_elapsed_s", elapsed_s);
 
-            const char *state_json = device_registry_get_state_json(devices[i].id);
-            if (strcmp(state_json, "{}") != 0)
+            char state_buf[128];
+            if (device_registry_get_state_json(devices[i].id, state_buf, sizeof(state_buf)) == ESP_OK
+                && strcmp(state_buf, "{}") != 0)
             {
-                cJSON *state = cJSON_Parse(state_json);
+                cJSON *state = cJSON_Parse(state_buf);
                 if (state)
                 {
                     cJSON_AddItemToObject(item, "state", state);

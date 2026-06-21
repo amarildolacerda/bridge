@@ -9,24 +9,24 @@ static const char DASHBOARD_HTML[] PROGMEM = R"rawliteral(
 <title>)rawliteral" DASHBOARD_TITLE R"rawliteral(</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#F4F7FC;color:#2C3E50;padding:20px;max-width:900px;margin:0 auto}
-h1{font-size:1.5rem;margin-bottom:4px;color:#B2CEfE}
-.sub{color:#7A8BA3;font-size:.85rem;margin-bottom:20px}
+body{font-family:system-ui,-apple-system,sans-serif;background:#010102;color:#f7f8f8;padding:20px;max-width:900px;margin:0 auto}
+h1{font-size:1.5rem;margin-bottom:4px;color:#5e6ad2}
+.sub{color:#8a8f98;font-size:.85rem;margin-bottom:20px}
 .stats{display:flex;gap:12px;margin-bottom:20px}
-.stat{background:#FFFFFF;border-radius:12px;padding:16px 24px;flex:1;text-align:center}
-.stat .num{font-size:2rem;font-weight:700;color:#B2CEfE}
-.stat .label{font-size:.75rem;color:#7A8BA3;text-transform:uppercase;letter-spacing:.5px}
-.refresh{text-align:right;margin-bottom:8px;font-size:.8rem;color:#7A8BA3}
-table{width:100%;border-collapse:collapse;background:#FFFFFF;border-radius:12px;overflow:hidden}
-th{background:#E8EEF8;padding:12px 16px;text-align:left;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:#7A8BA3}
-td{padding:12px 16px;border-top:1px solid #E8EEF8;font-size:.9rem}
-td.id{color:#B2CEfE;font-weight:600;font-family:monospace}
-td.type{color:#9FA8DA}
-td.name{color:#2C3E50}
+.stat{background:#0f1011;border-radius:12px;padding:16px 24px;flex:1;text-align:center;border:1px solid #23252a}
+.stat .num{font-size:2rem;font-weight:700;color:#f7f8f8}
+.stat .label{font-size:.75rem;color:#8a8f98;text-transform:uppercase;letter-spacing:.5px}
+.refresh{text-align:right;margin-bottom:8px;font-size:.8rem;color:#8a8f98}
+table{width:100%;border-collapse:collapse;background:#0f1011;border-radius:12px;overflow:hidden;border:1px solid #23252a}
+th{background:#141516;padding:12px 16px;text-align:left;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:#8a8f98}
+td{padding:12px 16px;border-top:1px solid #23252a;font-size:.9rem}
+td.id{color:#5e6ad2;font-weight:600;font-family:monospace}
+td.type{color:#8a8f98}
+td.name{color:#f7f8f8}
 .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.75rem;font-weight:600}
-.badge.on{background:#E8F5E9;color:#2E7D32}
-.badge.off{background:#FFEBEE;color:#C62828}
-.empty{text-align:center;padding:40px 16px;color:#7A8BA3}
+.badge.on{background:rgba(39,166,68,0.15);color:#27a644}
+.badge.off{background:rgba(229,72,77,0.15);color:#e5484d}
+.empty{text-align:center;padding:40px 16px;color:#8a8f98}
 </style>
 </head>
 <body>
