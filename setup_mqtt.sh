@@ -3,7 +3,7 @@ set -e
 
 MQTT_USER="${1:-bridge}"
 MQTT_PASS="${2:-bridge123}"
-BRIDGE_DIR="/home/kzuca/project/bridge/esp32_bridge_python"
+BRIDGE_DIR="/home/kzuca/project/bridge/bridge_python"
 
 echo "=== Criando config Mosquitto ==="
 mkdir -p /tmp/mosquitto/config /tmp/mosquitto/data

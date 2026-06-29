@@ -19,15 +19,15 @@ services:
       - /etc/localtime:/etc/localtime:ro
 
   bridge:
-    build: esp32_bridge_python
+    build: bridge_python
     container_name: esp32-bridge
     restart: unless-stopped
     network_mode: host
     volumes:
       - .:/project
     environment:
-      BRIDGE_SRC_DIR: /project/esp32_bridge_python
-      PYTHONPATH: /project/esp32_bridge_python
+      BRIDGE_SRC_DIR: /project/bridge_python
+      PYTHONPATH: /project/bridge_python
       MQTT_HOST: localhost
       MQTT_PORT: "1883"
       HTTP_PORT: "80"

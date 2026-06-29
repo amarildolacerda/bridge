@@ -89,7 +89,7 @@ git clone --recursive -b v1.8.2 https://github.com/espressif/esp-rainmaker.git ~
 11. Bridge broadcast (`b`): envia `re_register:true` via UDP, clients re-registram via HTTP, mostra registrados + descobertos
 12. Dashboard web tem card QR code do RainMaker em `/api/qrcode`
 13. Versão (tag) vale para bridge C, bridge Python e clients ESP8266 — todos devem ter a mesma FW_VERSION
-14. Toda implementação adicionada no bridge C (main/) deve ser replicada no bridge Python (esp32_bridge_python/) e vice-versa
+14. Toda implementação adicionada no bridge C (main/) deve ser replicada no bridge Python (bridge_python/ - submodule) e vice-versa
 
 ## Regras de AI
 0. economizar tokens com respostas minimas sem explicações desnecessaria 
