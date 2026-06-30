@@ -24,7 +24,7 @@ def check_port(ip, port=8123, timeout=1):
         return None
 
 def main():
-    parser = argparse.ArgumentParser(description="Scan for open port on 192.168.1.100-245")
+    parser = argparse.ArgumentParser(description="Scan for open port on 192.168.1.1-253")
     parser.add_argument("-p", "--port", type=int, default=8123, help="Port to scan (default: 8123)")
     args = parser.parse_args()
     
@@ -43,9 +43,12 @@ def main():
             result = future.result()
             if result:
                 marker = " <eu>" if result == local_ip else ""
-                print(f"Found: {result}:{args.port}{marker}")
+                print(f"---------------------->Found: {result}:{args.port}{marker}")
                 found.append(result)
-    
+            else:
+                #marker = " <eu>" if result == local_ip else ""
+                print(f"Not found: {ips[ips.index(futures[future])]}")
+           
     if not found:
         print(f"No devices found with port {args.port} open")
     else:
