@@ -1,0 +1,71 @@
+#ifndef CONFIG_H
+#define CONFIG_H
+
+#define FW_VERSION "0.0.1"
+#define DEVICE_NAME "ESP8266_Sensor"
+
+#ifndef SENSOR_TYPE
+#define SENSOR_TYPE SENSOR_TYPE_TEMP_HUM
+#endif
+
+#define SENSOR_TYPE_TEMP_HUM 1
+#define SENSOR_TYPE_CONTACT 2
+#define SENSOR_TYPE_MOTION 3
+#define SENSOR_TYPE_GAS 4
+#define SENSOR_TYPE_RAIN 5
+#define SENSOR_TYPE_TANK 6
+
+#ifndef SLEEP_INTERVAL_SEC
+#define SLEEP_INTERVAL_SEC 120
+#endif
+
+#ifndef SEND_RETRIES
+#define SEND_RETRIES 3
+#endif
+
+#ifndef ACK_TIMEOUT_MS
+#define ACK_TIMEOUT_MS 200
+#endif
+
+#ifndef BATTERY_ADC_PIN
+#define BATTERY_ADC_PIN A0
+#endif
+
+#ifndef BATTERY_DIVIDER_R1
+#define BATTERY_DIVIDER_R1 100000
+#endif
+
+#ifndef BATTERY_DIVIDER_R2
+#define BATTERY_DIVIDER_R2 10000
+#endif
+
+#ifndef OTA_BUTTON_GPIO
+#define OTA_BUTTON_GPIO 0
+#endif
+
+#ifndef OTA_BUTTON_HOLD_MS
+#define OTA_BUTTON_HOLD_MS 3000
+#endif
+
+#define ESPNOW_CHANNEL 1
+#define ESPNOW_PROTOCOL_VERSION 1
+
+#define RTC_MEM_SEQUENCE_ADDR 0
+#define RTC_MEM_SENSOR_TYPE_ADDR 4
+#define RTC_MEM_MAGIC 0xDEADBEEF
+
+#define WIFI_CONFIG_PORTAL_SSID "ESP_Sensor_OTA"
+#define WIFI_CONFIG_PORTAL_PASS "password123"
+
+#define DHT_PIN 4
+#define DHT_TYPE DHT22
+#define CONTACT_PIN 5
+#define MOTION_PIN 5
+#define GAS_ANALOG_PIN A0
+#define RAIN_ANALOG_PIN A0
+#define RAIN_DIGITAL_PIN 4
+#define TANK_TRIG_PIN 12
+#define TANK_ECHO_PIN 14
+#define TANK_MAX_CM 200
+
+#endif
