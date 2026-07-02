@@ -5,4 +5,4 @@ idf_component_register(SRC_DIRS "."
 target_add_binary_data(${COMPONENT_LIB} "web/dashboard.html" TEXT)
 target_add_binary_data(${COMPONENT_LIB} "web/dashboard.css" TEXT)
 
-target_compile_definitions(${COMPONENT_LIB} PRIVATE FW_VERSION="v0.0.10")
+target_compile_definitions(${COMPONENT_LIB} PRIVATE FW_VERSION="v0.0.12")

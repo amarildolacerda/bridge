@@ -1,3 +1,6 @@
 [submodule "bridge_python"]
 	path = bridge_python
 	url = https://github.com/amarildolacerda/bridge_python.git
+[submodule "clients/espnow_gateway"]
+	path = clients/espnow_gateway
+	url = https://github.com/amarildolacerda/espnow_gateway.git
