@@ -1,0 +1,3 @@
+[submodule "bridge_python"]
+	path = bridge_python
+	url = https://github.com/amarildolacerda/bridge_python.git
