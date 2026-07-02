@@ -74,18 +74,22 @@ extern "C" void espnow_recv_cb(uint8_t *mac, uint8_t *data, uint8_t len) {
                              (req->sensor_type == SENSOR_TYPE_RAIN) ? "Chuva" : "Tanque",
                              i + 1);
                     s_pending_pairs[i].active = true;
+                    Serial.printf("[ESP-NOW] Pair request queued from %s type=%d seq=%d slot=%d\n",
+                                  mac_str, req->sensor_type, req->sequence, i);
                     break;
                 }
             }
+
             break;
         }
 
         case ESPNOW_MSG_SENSOR_DATA:
         case ESPNOW_MSG_HEARTBEAT: {
-            if (len < sizeof(espnow_header_t)) { s_crc_errors++; return; }
+            if (len < ESPNOW_HEADER_FIXED_SIZE) { s_crc_errors++; return; }
             espnow_header_t *hdr = (espnow_header_t*)data;
 
             if (hdr->version != ESPNOW_PROTOCOL_VERSION) { s_crc_errors++; return; }
+            if (len < ESPNOW_HEADER_FIXED_SIZE + hdr->payload_len) { s_crc_errors++; return; }
 
             int slot = sensor_registry_find_by_mac(mac);
 
@@ -123,8 +127,17 @@ void send_ack(const uint8_t *mac, uint16_t sequence, uint8_t status, uint8_t slo
         .assigned_slot = slot
     };
     mac_copy(ack.sensor_mac, mac);
-    
-    esp_now_send((uint8_t*)mac, (uint8_t*)&ack, sizeof(ack));
+
+    esp_now_del_peer((uint8_t*)mac);
+    int ch = WiFi.channel();
+    if (ch < 1 || ch > 13) ch = 1;
+    esp_now_add_peer((uint8_t*)mac, ESP_NOW_ROLE_COMBO, ch, NULL, 0);
+    int ret = esp_now_send((uint8_t*)mac, (uint8_t*)&ack, sizeof(ack));
+    if (ret != 0) {
+        char mac_str[18];
+        mac_to_str(mac, mac_str, sizeof(mac_str));
+        Serial.printf("[ESP-NOW] ACK send failed to %s ret=%d\n", mac_str, ret);
+    }
 }
 
 void send_pair_response(const uint8_t *mac, uint16_t sequence, uint16_t slot) {
@@ -138,8 +151,15 @@ void send_pair_response(const uint8_t *mac, uint16_t sequence, uint16_t slot) {
     };
     mac_copy(resp.sensor_mac, mac);
     mac_copy(resp.gateway_mac, s_gateway_mac);
-    
-    esp_now_send((uint8_t*)mac, (uint8_t*)&resp, sizeof(resp));
+
+    esp_now_del_peer((uint8_t*)mac);
+    int ch = WiFi.channel();
+    if (ch < 1 || ch > 13) ch = 1;
+    esp_now_add_peer((uint8_t*)mac, ESP_NOW_ROLE_COMBO, ch, NULL, 0);
+    int ret = esp_now_send((uint8_t*)mac, (uint8_t*)&resp, sizeof(resp));
+    char mac_str[18];
+    mac_to_str(mac, mac_str, sizeof(mac_str));
+    Serial.printf("[ESP-NOW] Pair response sent to %s slot=%d seq=%d ret=%d\n", mac_str, slot, sequence, ret);
 }
 
 bool espnow_handler_init() {

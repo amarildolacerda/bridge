@@ -91,6 +91,12 @@ void web_server_init() {
                         state["level_pct"] = s->state.tank.level_pct;
                         state["distance_cm"] = s->state.tank.distance_cm;
                         break;
+                    case SENSOR_TYPE_DHT_GAS:
+                        state["temperature"] = s->state.dht_gas.temperature;
+                        state["humidity"] = s->state.dht_gas.humidity;
+                        state["gas_level"] = s->state.dht_gas.gas_level;
+                        state["alarm"] = s->state.dht_gas.alarm;
+                        break;
                 }
             }
         }
@@ -110,6 +116,11 @@ void web_server_init() {
     
     s_server.on("/api/pair/stop", HTTP_POST, []() {
         espnow_stop_pairing();
+        s_server.send(200, "application/json", "{\"status\":\"ok\"}");
+    });
+
+    s_server.on("/api/clear", HTTP_POST, []() {
+        sensor_registry_clear_all();
         s_server.send(200, "application/json", "{\"status\":\"ok\"}");
     });
     

@@ -120,7 +120,7 @@ h1 { font-size:1.5rem; font-weight:600; }
         <div class="btn-group">
             <button class="btn btn-primary" onclick="confirmName()">Salvar</button>
             <button class="btn btn-secondary" onclick="closeNameModal()">Cancelar</button>
-        </div    </div>
+        </div></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -152,7 +152,7 @@ function fmtUptime(ms) {
 }
 
 function typeName(type) {
-    const names = {1:'Temp+Hum', 2:'Contato', 3:'Movimento', 4:'Gás', 5:'Chuva', 6:'Tanque'};
+    const names = {1:'Temp+Hum', 2:'Contato', 3:'Movimento', 4:'Gás', 5:'Chuva', 6:'Tanque', 7:'DHT+Gas'};
     return names[type] || 'Desconhecido';
 }
 
@@ -208,9 +208,15 @@ function renderState(s) {
     } else if (s.type === 6 && st.tank) {
         html += `<span class="state-item state-tank">🛢 ${st.tank.level_pct}%</span>`;
         html += `<span class="state-item state-tank">${st.tank.distance_cm} cm</span>`;
+    } else if (s.type === 7) {
+        html += `<span class="state-item state-temp">🌡 ${(st.temperature||0).toFixed(1)}°C</span>`;
+        html += `<span class="state-item state-hum">💧 ${(st.humidity||0).toFixed(0)}%</span>`;
+        html += `<span class="state-item state-gas">⛽ ${st.gas_level||0}%</span>`;
+        if (st.alarm) html += `<span class="state-item state-gas">🚨 ALARME</span>`;
     }
     if (s.battery_pct !== undefined) {
         html += `<span class="state-item state-battery">🔋 ${s.battery_pct}%</span>`;
+    }
     return html || '<span class="state-item" style="color:var(--muted)">Aguardando dados...</span>';
 }
 
@@ -219,11 +225,11 @@ async function loadData() {
         const [info, sensors] = await Promise.all([api('/api/info'), api('/api/sensors')]);
         document.getElementById('stat-paired').textContent = info.paired_count;
         document.getElementById('stat-online').textContent = info.online_count;
-        document.getElementId('stat-rx').textContent = info.rx_total;
+        document.getElementById('stat-rx').textContent = info.rx_total;
         document.getElementById('stat-uptime').textContent = fmtUptime(info.uptime_ms);
         renderSensors(sensors.map(s => ({
             ...s,
-            mac_str: s.mac.map((b,i) => b.toString(16).padStart(2,'0')).join(':').toUpperCase()
+            mac_str: s.mac
         })));
     } catch (e) {
         showToast('Erro ao carregar: '+e.message, true);

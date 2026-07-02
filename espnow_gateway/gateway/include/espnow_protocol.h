@@ -8,6 +8,7 @@
 #define ESPNOW_PROTOCOL_VERSION 1
 #define ESPNOW_MAX_PAYLOAD 250
 #define ESPNOW_SEQUENCE_MAX 65535
+#define ESPNOW_HEADER_FIXED_SIZE (sizeof(espnow_header_t) - sizeof(((espnow_header_t*)0)->payload))
 
 typedef enum {
     ESPNOW_MSG_SENSOR_DATA = 0x01,
