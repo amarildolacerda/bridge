@@ -1,7 +1,7 @@
 #pragma once
 #include <Arduino.h>
 
-#define FW_VERSION "v0.0.12"
+#define FW_VERSION "v0.0.13"
 
 #define DEVICE_NAME "Sensor Presenca"
 

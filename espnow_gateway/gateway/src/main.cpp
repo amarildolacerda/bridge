@@ -119,7 +119,6 @@ void setup() {
     Serial.printf("============================================\n");
     
     sensor_registry_init();
-    espnow_handler_init();
     bridge_client_load_config();
     bridge_client_generate_device_ids();
     
@@ -131,6 +130,7 @@ void setup() {
         ESP.restart();
     }
     
+    espnow_handler_init();
     web_server_init();
     
     if (bridge_client_discover()) {

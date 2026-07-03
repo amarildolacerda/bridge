@@ -18,6 +18,7 @@ typedef struct {
     unsigned long last_seen;
     bool paired;
     bool online;
+    uint8_t ip[4];
     union {
         struct { float temperature; float humidity; } temp_hum;
         struct { uint8_t contact_state; uint8_t tamper; } contact;
