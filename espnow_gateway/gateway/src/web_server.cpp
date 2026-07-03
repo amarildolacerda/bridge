@@ -5,6 +5,7 @@
 #include "config.h"
 #include "pages.h"
 #include <ESP8266WebServer.h>
+#include <uri/UriBraces.h>
 #include <WiFiManager.h>
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
@@ -27,6 +28,7 @@ void web_server_init() {
         doc["crc_errors"] = espnow_get_crc_errors();
         doc["uptime_ms"] = millis();
         doc["pairing_mode"] = espnow_is_pairing();
+        doc["pairing_window_sec"] = PAIRING_WINDOW_MS / 1000;
         doc["bridge_host"] = bridge_client_get_host();
         doc["bridge_port"] = bridge_client_get_port();
         doc["bridge_discovered"] = bridge_client_is_discovered();
@@ -61,9 +63,14 @@ void web_server_init() {
                 obj["sequence"] = s->sequence;
                 obj["battery_pct"] = s->battery_pct;
                 obj["last_rssi"] = s->last_rssi;
-                obj["last_seen"] = s->last_seen;
+                obj["last_seen"] = (s->online && s->last_seen > 0) ? (long)(millis() - s->last_seen) : -1;
                 obj["online"] = s->online;
                 obj["paired"] = s->paired;
+                if (s->ip[0] || s->ip[1] || s->ip[2] || s->ip[3]) {
+                    char ip_str[16];
+                    sprintf(ip_str, "%d.%d.%d.%d", s->ip[0], s->ip[1], s->ip[2], s->ip[3]);
+                    obj["ip"] = ip_str;
+                }
                 
                 JsonObject state = obj["state"].to<JsonObject>();
                 switch (s->type) {
@@ -107,10 +114,12 @@ void web_server_init() {
     });
     
     s_server.on("/api/pair/start", HTTP_POST, []() {
-        if (espnow_start_pairing()) {
+        if (espnow_is_pairing()) {
+            s_server.send(409, "application/json", "{\"error\":\"already pairing\"}");
+        } else if (espnow_start_pairing()) {
             s_server.send(200, "application/json", "{\"status\":\"ok\"}");
         } else {
-            s_server.send(400, "application/json", "{\"error\":\"max sensors reached or already pairing\"}");
+            s_server.send(400, "application/json", "{\"error\":\"max sensors reached\"}");
         }
     });
     
@@ -129,11 +138,11 @@ void web_server_init() {
         s_server.send(200, "application/json", "{\"status\":\"ok\"}");
     });
     
-    s_server.on("/api/sensor/", HTTP_POST, []() {
-        String path = s_server.uri();
-        int slot = path.substring(12).toInt();
+    s_server.on(UriBraces("/api/sensor/{}/{}"), HTTP_POST, []() {
+        int slot = s_server.pathArg(0).toInt();
+        String action = s_server.pathArg(1);
         
-        if (path.endsWith("/name")) {
+        if (action == "name") {
             JsonDocument doc;
             DeserializationError err = deserializeJson(doc, s_server.arg("plain"));
             if (err || !doc.containsKey("name")) {
@@ -151,14 +160,14 @@ void web_server_init() {
             sensor_registry_save();
             bridge_client_register_sensor(s);
             s_server.send(200, "application/json", "{\"status\":\"ok\"}");
-        } else if (path.endsWith("/remove")) {
+        } else if (action == "remove") {
             if (sensor_registry_remove(slot)) {
                 s_server.send(200, "application/json", "{\"status\":\"ok\"}");
             } else {
                 s_server.send(404, "application/json", "{\"error\":\"sensor not found\"}");
             }
         } else {
-            s_server.send(404, "application/json", "{\"error\":\"not found\"}");
+            s_server.send(404, "application/json", "{\"error\":\"unknown action\"}");
         }
     });
     
@@ -177,6 +186,12 @@ void web_server_init() {
         } else {
             s_server.send(500, "application/json", "{\"error\":\"save failed\"}");
         }
+    });
+    
+    s_server.on("/api/restart", HTTP_POST, []() {
+        s_server.send(200, "application/json", "{\"status\":\"restarting\"}");
+        delay(500);
+        ESP.restart();
     });
     
     s_server.on("/api/ota", HTTP_POST, []() {

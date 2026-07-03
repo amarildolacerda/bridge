@@ -232,7 +232,7 @@ static bool espnow_send_data(void)
 {
     if (!s_paired || !s_espnow_ready) return false;
 
-    uint8_t buf[ESPNOW_HEADER_FIXED_SIZE + sizeof(payload_dht_gas_t)];
+    uint8_t buf[ESPNOW_HEADER_FIXED_SIZE + sizeof(payload_dht_gas_t) + 4];
     memset(buf, 0, sizeof(buf));
 
     espnow_header_t *hdr = (espnow_header_t *)buf;
@@ -249,7 +249,14 @@ static bool espnow_send_data(void)
     pl->humidity = s_humidity;
     pl->gas_level = (uint16_t)s_gas_level;
     pl->alarm = s_alarm ? 1 : 0;
-    hdr->payload_len = sizeof(payload_dht_gas_t);
+
+    IPAddress ip = WiFi.localIP();
+    uint8_t *ip_dst = hdr->payload + sizeof(payload_dht_gas_t);
+    ip_dst[0] = ip[0];
+    ip_dst[1] = ip[1];
+    ip_dst[2] = ip[2];
+    ip_dst[3] = ip[3];
+    hdr->payload_len = sizeof(payload_dht_gas_t) + 4;
 
     if (!espnow_add_peer(s_gateway_mac))
     {

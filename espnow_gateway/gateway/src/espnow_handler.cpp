@@ -55,10 +55,16 @@ extern "C" void espnow_recv_cb(uint8_t *mac, uint8_t *data, uint8_t len) {
     switch (msg_type) {
         case ESPNOW_MSG_PAIR_REQUEST: {
             if (len < sizeof(espnow_pair_request_t)) { s_crc_errors++; return; }
-            if (!s_pairing_mode) { Serial.printf("[ESP-NOW] Pair request ignored (not pairing)\n"); return; }
-            if (sensor_registry_find_by_mac(mac) >= 0) return;
-
             espnow_pair_request_t *req = (espnow_pair_request_t*)data;
+
+            int existing_slot = sensor_registry_find_by_mac(mac);
+            if (existing_slot >= 0) {
+                send_pair_response(mac, req->sequence, existing_slot);
+                Serial.printf("[ESP-NOW] Re-paired known sensor %s slot=%d\n", mac_str, existing_slot);
+                return;
+            }
+
+            if (!s_pairing_mode) { Serial.printf("[ESP-NOW] New pair request ignored (not pairing)\n"); return; }
 
             for (int i = 0; i < PENDING_PAIR_MAX; i++) {
                 if (!s_pending_pairs[i].active) {

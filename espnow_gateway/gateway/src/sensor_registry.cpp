@@ -9,6 +9,7 @@ static bool s_initialized = false;
 bool sensor_registry_init() {
     EEPROM.begin(EEPROM_SIZE);
     sensor_registry_load();
+    EEPROM.end();
     s_initialized = true;
     Serial.printf("[Gateway] Sensor registry initialized: %d paired\n", sensor_registry_count_paired());
     return true;
@@ -163,26 +164,57 @@ bool sensor_registry_update_state(int slot, const espnow_header_t *header, const
             break;
         }
     }
+
+    size_t expected = 0;
+    switch (s->type) {
+        case SENSOR_TYPE_TEMP_HUM: expected = sizeof(payload_temp_hum_t); break;
+        case SENSOR_TYPE_CONTACT:  expected = sizeof(payload_contact_t); break;
+        case SENSOR_TYPE_MOTION:   expected = sizeof(payload_motion_t); break;
+        case SENSOR_TYPE_GAS:      expected = sizeof(payload_gas_t); break;
+        case SENSOR_TYPE_DHT_GAS:  expected = sizeof(payload_dht_gas_t); break;
+        case SENSOR_TYPE_RAIN:     expected = sizeof(payload_rain_t); break;
+        case SENSOR_TYPE_TANK:     expected = sizeof(payload_tank_t); break;
+    }
+    if (expected && payload_len >= expected + 4)
+        memcpy(s->ip, payload + payload_len - 4, 4);
+
     return true;
 }
 
 bool sensor_registry_save() {
+    Serial.println("[EEPROM] Saving sensors...");
+    EEPROM.begin(EEPROM_SIZE);
     for (int i = 0; i < MAX_VIRTUAL_SENSORS; i++) {
         int addr = EEPROM_SENSOR_BASE + i * EEPROM_SENSOR_SIZE;
-        EEPROM.write(addr, s_sensors[i].paired ? 0xAA : 0x00);
+        uint8_t marker = s_sensors[i].paired ? 0xAA : 0x00;
+        EEPROM.write(addr, marker);
         if (s_sensors[i].paired) {
             EEPROM.write(addr + 1, s_sensors[i].type);
             EEPROM.write(addr + 2, s_sensors[i].slot);
             for (int j = 0; j < 6; j++) EEPROM.write(addr + 3 + j, s_sensors[i].mac[j]);
-            for (int j = 0; j < 32 && j < (int)strlen(s_sensors[i].name); j++) EEPROM.write(addr + 9 + j, s_sensors[i].name[j]);
+            for (int j = 0; j < 32; j++) {
+                if (j < (int)strlen(s_sensors[i].name))
+                    EEPROM.write(addr + 9 + j, s_sensors[i].name[j]);
+                else
+                    EEPROM.write(addr + 9 + j, 0);
+            }
             EEPROM.write(addr + 41, 0);
+            Serial.printf("[EEPROM] Saved slot %d marker=0x%02X at addr=%d\n", i, marker, addr);
         }
     }
-    EEPROM.commit();
-    return true;
+    bool ok = EEPROM.commit();
+    EEPROM.end();
+    Serial.printf("[EEPROM] commit=%s (%d paired)\n", ok ? "OK" : "FAIL", sensor_registry_count_paired());
+    return ok;
 }
 
 void sensor_registry_load() {
+    Serial.print("[EEPROM] Dump markers:");
+    for (int i = 0; i < MAX_VIRTUAL_SENSORS; i++) {
+        uint8_t m = EEPROM.read(EEPROM_SENSOR_BASE + i * EEPROM_SENSOR_SIZE);
+        Serial.printf(" %02X", m);
+    }
+    Serial.println();
     for (int i = 0; i < MAX_VIRTUAL_SENSORS; i++) {
         int addr = EEPROM_SENSOR_BASE + i * EEPROM_SENSOR_SIZE;
         uint8_t marker = EEPROM.read(addr);
@@ -192,11 +224,15 @@ void sensor_registry_load() {
             s_sensors[i].slot = EEPROM.read(addr + 2);
             for (int j = 0; j < 6; j++) s_sensors[i].mac[j] = EEPROM.read(addr + 3 + j);
             char name[33] = {0};
+            int name_len = 0;
             for (int j = 0; j < 32; j++) {
                 uint8_t c = EEPROM.read(addr + 9 + j);
                 if (c == 0) break;
+                if (c < 32 || c > 126) break;
                 name[j] = (char)c;
+                name_len = j + 1;
             }
+            name[name_len] = 0;
             strncpy(s_sensors[i].name, name, sizeof(s_sensors[i].name) - 1);
             s_sensors[i].sequence = 0;
             s_sensors[i].battery_pct = 100;

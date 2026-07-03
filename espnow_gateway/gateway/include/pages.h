@@ -58,6 +58,8 @@ h1 { font-size:1.5rem; font-weight:600; }
 .toast.show { display:block; animation:slideIn .3s; }
 @keyframes slideIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 .empty { text-align:center; color:var(--muted); padding:40px 20px; }
+.btn-pairing { background:var(--warn); color:#000; animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 .modal { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:100; }
 .modal.show { display:flex; }
 .modal-content { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; width:90%; max-width:400px; }
@@ -76,7 +78,7 @@ h1 { font-size:1.5rem; font-weight:600; }
     <div class="header">
         <h1>ESP-NOW Gateway</h1>
         <div class="btn-group">
-            <button class="btn btn-primary" onclick="enterPairingMode()">+ Adicionar Sensor</button>
+            <button class="btn btn-primary" id="btn-pair" onclick="enterPairingMode()">+ Adicionar Sensor</button>
             <button class="btn btn-secondary" onclick="broadcastReregister()">Re-registrar Tudo</button>
             <button class="btn btn-secondary" onclick="loadData()">Atualizar</button>
         </div>
@@ -92,17 +94,6 @@ h1 { font-size:1.5rem; font-weight:600; }
     <div class="card">
         <h2>Sensores Virtuais</h2>
         <div id="sensors-grid" class="grid"></div>
-    </div>
-</div>
-
-<div class="modal" id="pair-modal">
-    <div class="modal-content">
-        <h3>Modo Pareamento</h3>
-        <p>O gateway está aguardando sensores por <span id="pair-countdown">60</span> segundos.</p>
-        <p>Ligue o sensor ou acorde-o do deep sleep.</p>
-        <div class="btn-group">
-            <button class="btn btn-danger" onclick="exitPairingMode()">Cancelar</button>
-        </div>
     </div>
 </div>
 
@@ -128,6 +119,7 @@ h1 { font-size:1.5rem; font-weight:600; }
 <script>
 let pairingTimer = null;
 let namingSlot = -1;
+let s_pairingWindowSec = 180;
 
 async function api(path, opts={}) {
     const res = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
@@ -175,9 +167,10 @@ function renderSensors(sensors) {
                 <div><span class="label">MAC</span><span class="value">${s.mac_str}</span></div>
                 <div><span class="label">Bateria</span><span class="value state-battery">${s.battery_pct}%</span></div>
                 <div><span class="label">RSSI</span><span class="value">${s.last_rssi} dBm</span></div>
-                <div><span class="label">Último</span><span class="value">${s.last_seen ? fmtUptime(Date.now() - s.last_seen) : '—'}</span></div>
+                <div><span class="label">Último</span><span class="value">${s.last_seen >= 0 ? fmtUptime(s.last_seen) : '—'}</span></div>
                 <div><span class="label">Seq</span><span class="value">${s.sequence}</span></div>
                 <div><span class="label">Bridge ID</span><span class="value" style="font-size:0.65rem">${s.bridge_device_id || '—'}</span></div>
+                ${s.ip ? `<div><span class="label">IP</span><span class="value"><a href="http://${s.ip}">${s.ip}</a></span></div>` : ''}
             </div>
             <div class="sensor-state" id="state-${s.slot}">${renderState(s)}</div>
             <div class="btn-group">
@@ -189,25 +182,25 @@ function renderSensors(sensors) {
 }
 
 function renderState(s) {
-    const st = s.state;
+    const st = s.state || {};
     let html = '';
-    if (s.type === 1 && st.temp_hum) {
-        html += `<span class="state-item state-temp">🌡 ${st.temp_hum.temperature.toFixed(1)}°C</span>`;
-        html += `<span class="state-item state-hum">💧 ${st.temp_hum.humidity.toFixed(0)}%</span>`;
-    } else if (s.type === 2 && st.contact) {
-        html += `<span class="state-item state-contact">${st.contact.contact_state ? '🚪 ABERTO' : '🔒 FECHADO'}</span>`;
-        if (st.contact.tamper) html += `<span class="state-item state-contact">⚠️ VIOLAÇÃO</span>`;
-    } else if (s.type === 3 && st.motion) {
-        html += `<span class="state-item state-motion">${st.motion.motion_state ? '🏃 MOVIMENTO' : '😴 LIVRE'}</span>`;
-    } else if (s.type === 4 && st.gas) {
-        html += `<span class="state-item state-gas">⛽ ${st.gas.gas_level} ppm</span>`;
-        if (st.gas.alarm) html += `<span class="state-item state-gas">🚨 ALARME</span>`;
-    } else if (s.type === 5 && st.rain) {
-        html += `<span class="state-item state-rain">🌧 ${st.rain.rain_level}%</span>`;
-        html += `<span class="state-item state-rain">${st.rain.rain_digital ? '☔ Digital: Chuva' : '☀️ Digital: Seco'}</span>`;
-    } else if (s.type === 6 && st.tank) {
-        html += `<span class="state-item state-tank">🛢 ${st.tank.level_pct}%</span>`;
-        html += `<span class="state-item state-tank">${st.tank.distance_cm} cm</span>`;
+    if (s.type === 1) {
+        html += `<span class="state-item state-temp">🌡 ${(st.temperature||0).toFixed(1)}°C</span>`;
+        html += `<span class="state-item state-hum">💧 ${(st.humidity||0).toFixed(0)}%</span>`;
+    } else if (s.type === 2) {
+        html += `<span class="state-item state-contact">${st.contact ? '🚪 ABERTO' : '🔒 FECHADO'}</span>`;
+        if (st.tamper) html += `<span class="state-item state-contact">⚠️ VIOLAÇÃO</span>`;
+    } else if (s.type === 3) {
+        html += `<span class="state-item state-motion">${st.occupancy ? '🏃 MOVIMENTO' : '😴 LIVRE'}</span>`;
+    } else if (s.type === 4) {
+        html += `<span class="state-item state-gas">⛽ ${st.gas_level||0} ppm</span>`;
+        if (st.alarm) html += `<span class="state-item state-gas">🚨 ALARME</span>`;
+    } else if (s.type === 5) {
+        html += `<span class="state-item state-rain">🌧 ${st.rain_level||0}%</span>`;
+        html += `<span class="state-item state-rain">${st.rain_digital ? '☔ Chuva' : '☀️ Seco'}</span>`;
+    } else if (s.type === 6) {
+        html += `<span class="state-item state-tank">🛢 ${st.level_pct||0}%</span>`;
+        html += `<span class="state-item state-tank">${st.distance_cm||0} cm</span>`;
     } else if (s.type === 7) {
         html += `<span class="state-item state-temp">🌡 ${(st.temperature||0).toFixed(1)}°C</span>`;
         html += `<span class="state-item state-hum">💧 ${(st.humidity||0).toFixed(0)}%</span>`;
@@ -227,6 +220,7 @@ async function loadData() {
         document.getElementById('stat-online').textContent = info.online_count;
         document.getElementById('stat-rx').textContent = info.rx_total;
         document.getElementById('stat-uptime').textContent = fmtUptime(info.uptime_ms);
+        if (info.pairing_window_sec) s_pairingWindowSec = info.pairing_window_sec;
         renderSensors(sensors.map(s => ({
             ...s,
             mac_str: s.mac
@@ -236,25 +230,42 @@ async function loadData() {
     }
 }
 
-async function enterPairingMode() {
-    try {
-        await api('/api/pair/start', {method:'POST'});
-        document.getElementById('pair-modal').classList.add('show');
-        let remaining = 60;
-        const el = document.getElementById('pair-countdown');
-        pairingTimer = setInterval(() => {
-            remaining--;
-            el.textContent = remaining;
-            if (remaining <= 0) exitPairingMode();
-        }, 1000);
-        showToast('Modo pareamento iniciado (180s)');
-    } catch (e) { showToast('Erro: '+e.message, true); }
+function startPairingCountdown() {
+    const btn = document.getElementById('btn-pair');
+    btn.classList.add('btn-pairing');
+    let remaining = s_pairingWindowSec;
+    btn.textContent = '✕ Pareando (' + remaining + 's)';
+    pairingTimer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+            btn.textContent = '✕ Pareando (' + remaining + 's)';
+        } else {
+            exitPairingMode();
+        }
+    }, 1000);
 }
 
-function exitPairingMode() {
+async function enterPairingMode() {
+    if (pairingTimer) { exitPairingMode(); return; }
+    try {
+        await api('/api/pair/start', {method:'POST'});
+        startPairingCountdown();
+    } catch (e) {
+        if (e.message.includes('already pairing')) {
+            startPairingCountdown();
+        } else {
+            showToast('Erro: '+e.message, true);
+        }
+    }
+}
+
+async function exitPairingMode() {
     if (pairingTimer) clearInterval(pairingTimer);
     pairingTimer = null;
-    document.getElementById('pair-modal').classList.remove('show');
+    try { await api('/api/pair/stop', {method:'POST'}); } catch(e) {}
+    const btn = document.getElementById('btn-pair');
+    btn.classList.remove('btn-pairing');
+    btn.textContent = '+ Adicionar Sensor';
 }
 
 async function broadcastReregister() {
@@ -294,7 +305,7 @@ function closeNameModal() {
 }
 
 async function removeSensor(slot) {
-    if (!confirm('Remover este sensor?')) return;
+    if (!confirm('Remover sensor do slot ' + slot + '?')) return;
     try {
         await api('/api/sensor/'+slot+'/remove', {method:'POST'});
         showToast('Sensor removido');
@@ -305,7 +316,7 @@ async function removeSensor(slot) {
 loadData();
 setInterval(loadData, 10000);
 
-document.getElementById('pair-modal').addEventListener('click', e => { if(e.target.id==='pair-modal') exitPairingMode(); });
+
 document.getElementById('name-modal').addEventListener('click', e => { if(e.target.id==='name-modal') closeNameModal(); });
 </script>
 </body>
